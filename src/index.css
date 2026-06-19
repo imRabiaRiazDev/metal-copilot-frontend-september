@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-ivory: #EDE5D0;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F8F5EE;
+  --border-light: #C4BEB0;
+  --border-medium: #A39B8A;
+  --gold: #D19E2C;
+  --gold-light: #E2B854;
+  --gold-dark: #B2821E;
+  --navy: #0B2048;
+  --navy-light: #16366E;
+  --emerald: #008F6A;
+  --amber: #E8822A;
+  --danger: #D61A0A;
+  --text-heading: #141A28;
+  --text-body: #262D40;
+  --text-caption: #4B536A;
+  --success: #008F6A;
+  --warning: #E8822A;
+  --glow-gold-color: #D19E2C;
+  --glow-navy-color: #0B2048;
+  --accent-glow: rgba(209,158,44,0.20);
+  --accent-border-hover: rgba(209,158,44,0.35);
+  --accent-bg-selected: rgba(209,158,44,0.08);
+  --accent-shadow-drag: rgba(209,158,44,0.35);
+  --accent-grid: rgba(209,158,44,0.06);
+}
+
+.dark {
+  --bg-ivory: #070E1E;
+  --bg-surface: #0B2048;
+  --bg-elevated: #16366E;
+  --border-light: #16366E;
+  --border-medium: #1E4994;
+  --gold: #E2B854;
+  --gold-light: #F0CE7A;
+  --gold-dark: #D19E2C;
+  --navy: #E2B854;
+  --navy-light: #F0CE7A;
+  --emerald: #4ADE80;
+  --amber: #FBBF24;
+  --danger: #EF4444;
+  --text-heading: #F2F0EA;
+  --text-body: #D4CFC5;
+  --text-caption: #9CA3AF;
+  --success: #4ADE80;
+  --warning: #FBBF24;
+  --glow-gold-color: #0F2A52;
+  --glow-navy-color: #081A36;
+  --accent-glow: rgba(22,54,110,0.25);
+  --accent-border-hover: rgba(22,54,110,0.40);
+  --accent-bg-selected: rgba(22,54,110,0.12);
+  --accent-shadow-drag: rgba(22,54,110,0.40);
+  --accent-grid: rgba(22,54,110,0.08);
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-ivory);
+  color: var(--text-body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-ivory);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold);
+}
+
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.10;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .glow {
+  opacity: 0.15;
+}
+
+.glow-gold {
+  background: var(--glow-gold-color);
+  width: 400px;
+  height: 400px;
+}
+
+.glow-navy {
+  background: var(--glow-navy-color);
+  width: 300px;
+  height: 300px;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold-dark) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, var(--accent-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--accent-grid) 1px, transparent 1px);
+}
+
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--accent-glow);
+  border-color: var(--accent-border-hover);
+}
+
+* {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-elevated) 50%, var(--bg-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+.selected-row {
+  background-color: var(--accent-bg-selected);
+}
+
+.shadow-gold {
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.shadow-gold-hover {
+  box-shadow: 0 8px 28px var(--accent-shadow-drag);
+}
+
+.kanban-card-dragging {
+  box-shadow: 0 8px 28px var(--accent-shadow-drag);
+  transform: rotate(2deg);
+}
