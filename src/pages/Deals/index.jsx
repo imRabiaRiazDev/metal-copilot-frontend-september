@@ -290,7 +290,7 @@ const Deals = () => {
   }
 
   return (
-    <div className="min-h-screen animate-fadeInUp">
+    <div className="min-h-0 w-full animate-fadeInUp">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-700 dark:text-white mb-1">
@@ -318,7 +318,7 @@ const Deals = () => {
         />
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: 'calc(100vh - 200px)' }}>
+          <div className="flex gap-4 pb-4 overflow-x-auto" style={{ minHeight: 'calc(100vh - 200px)' }}>
             {stages.map((stage) => {
               const stageDeals = getStageDeals(stage.key);
               return (

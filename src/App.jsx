@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import AuthCallback from './pages/AuthCallback';
 import Home from './pages/Home';
 import RFQList from './pages/RFQList';
 import Dashboard from './pages/Dashboard';
@@ -16,6 +17,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/home" element={<Home />} />

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -7,15 +7,11 @@ import {
   Search,
   Plus,
   X,
-  Check,
   Pencil,
   Trash2,
-  Tag,
   Loader2,
   MoreHorizontal,
-  ChevronDown,
   Mail,
-  Phone,
 } from 'lucide-react';
 import contactService from '../../services/contactService';
 import EmptyState from '../../components/EmptyState';
@@ -60,7 +56,7 @@ const InlineEdit = ({ value, onSave, onCancel }) => {
   );
 };
 
-const ContactDrawer = ({ contact, onClose, onSave }) => {
+const ContactDrawer = ({ contact, onClose, onSave, onDelete }) => {
   const isNew = !contact?.id;
   const [form, setForm] = useState({
     company_name: '',
@@ -141,15 +137,24 @@ const ContactDrawer = ({ contact, onClose, onSave }) => {
             <textarea name="notes" value={form.notes} onChange={handleChange} rows={4}
               className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold resize-none" />
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="submit"
-              className="flex-1 py-2.5 px-4 bg-gold text-white font-semibold rounded-lg text-sm hover:bg-gold-dark transition-all duration-200">
-              {isNew ? 'Create Contact' : 'Save Changes'}
-            </button>
-            <button type="button" onClick={onClose}
-              className="py-2.5 px-4 rounded-lg border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white text-sm transition-all duration-200">
-              Cancel
-            </button>
+          <div className="flex items-center justify-between pt-2">
+            {!isNew && (
+              <button type="button" onClick={() => onDelete(contact)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-danger/30 text-danger hover:bg-danger/10 text-sm font-medium transition-all duration-200">
+                <Trash2 size={16} />
+                Delete
+              </button>
+            )}
+            <div className="flex gap-3 ml-auto">
+              <button type="button" onClick={onClose}
+                className="py-2.5 px-4 rounded-lg border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white text-sm transition-all duration-200">
+                Cancel
+              </button>
+              <button type="submit"
+                className="py-2.5 px-4 bg-gold text-white font-semibold rounded-lg text-sm hover:bg-gold-dark transition-all duration-200">
+                {isNew ? 'Create Contact' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -363,10 +368,11 @@ const Contacts = () => {
                 {filtered.map((contact) => (
                   <tr
                     key={contact.id}
-                    className={`border-b border-border-light dark:border-white/5 transition-all duration-150 hover:shadow-gold hover:bg-gold/[0.02] ${
+                    className={`border-b border-border-light dark:border-white/5 transition-all duration-150 hover:shadow-gold hover:bg-gold/[0.02] cursor-pointer ${
                       selected.includes(contact.id) ? 'selected-row' : ''
                     }`}
                     onContextMenu={(e) => handleContextMenu(e, contact)}
+                    onClick={() => openEdit(contact)}
                   >
                     <td className="px-4 py-3">
                       <input
@@ -433,6 +439,7 @@ const Contacts = () => {
           contact={editingContact}
           onClose={() => { setDrawerOpen(false); setEditingContact(null); }}
           onSave={handleDrawerSave}
+          onDelete={(contact) => { setDrawerOpen(false); setEditingContact(null); deleteMutation.mutate(contact.id); }}
         />
       )}
 

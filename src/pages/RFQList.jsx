@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import rfqService from '../services/rfqService';
-import { Search, Eye, FileSearch, X, Loader2 } from 'lucide-react';
+import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const statusPills = {
   pending: 'bg-amber/10 text-amber border-amber/20',
@@ -24,6 +25,8 @@ const RFQList = () => {
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({ status: '', priority: '', search: '' });
   const [quickView, setQuickView] = useState(null);
+  const [quickViewDetail, setQuickViewDetail] = useState(null);
+  const [quickViewLoading, setQuickViewLoading] = useState(false);
 
   useEffect(() => {
     fetchRFQs();
@@ -52,6 +55,125 @@ const RFQList = () => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
+  const [editRFQ, setEditRFQ] = useState(null);
+  const [editDetail, setEditDetail] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editItems, setEditItems] = useState([]);
+  const [deletedItemIds, setDeletedItemIds] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const handleEditRFQ = async (rfq) => {
+    setEditRFQ(rfq);
+    setEditLoading(true);
+    setEditDetail(null);
+    setEditItems([]);
+    setDeletedItemIds([]);
+    try {
+      const detail = await rfqService.getRFQById(rfq.id);
+      setEditDetail(detail);
+      setEditItems(detail.items || []);
+    } catch {
+      toast.error('Failed to load RFQ details');
+      setEditRFQ(null);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditDetail(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleItemChange = (index, field, value) => {
+    setEditItems(prev => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const handleAddItem = () => {
+    setEditItems(prev => [...prev, {
+      item_name: '',
+      item_code: '',
+      description: '',
+      quantity: 1,
+      unit: '',
+      unit_price: null,
+      total_price: null,
+    }]);
+  };
+
+  const handleRemoveItem = (index) => {
+    const item = editItems[index];
+    if (item.id) {
+      setDeletedItemIds(prev => [...prev, item.id]);
+    }
+    setEditItems(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditSave = async () => {
+    if (!editRFQ || !editDetail) return;
+    setSaving(true);
+    try {
+      const payload = { ...editDetail };
+      delete payload.id;
+      delete payload.items;
+      delete payload.attachments;
+      delete payload.created_at;
+      delete payload.updated_at;
+      await rfqService.updateRFQ(editRFQ.id, payload);
+
+      for (const id of deletedItemIds) {
+        await rfqService.deleteRFQItem(id);
+      }
+
+      for (const item of editItems) {
+        const itemPayload = {
+          order: editRFQ.id,
+          item_name: item.item_name || '',
+          item_code: item.item_code || '',
+          description: item.description || '',
+          quantity: item.quantity || 0,
+          unit: item.unit || '',
+          unit_price: item.unit_price || null,
+          total_price: item.total_price || null,
+        };
+        if (item.id) {
+          await rfqService.updateRFQItem(item.id, itemPayload);
+        } else {
+          await rfqService.createRFQItem(itemPayload);
+        }
+      }
+
+      toast.success('RFQ updated');
+      setEditRFQ(null);
+      setEditDetail(null);
+      setEditItems([]);
+      setDeletedItemIds([]);
+      fetchRFQs();
+    } catch {
+      toast.error('Failed to update RFQ');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditDelete = async () => {
+    if (!editRFQ) return;
+    try {
+      await rfqService.deleteRFQ(editRFQ.id);
+      toast.success('RFQ deleted');
+      setEditRFQ(null);
+      setEditDetail(null);
+      setDeleteConfirm(null);
+      fetchRFQs();
+    } catch {
+      toast.error('Failed to delete RFQ');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-[calc(100vh-100px)] gap-3">
@@ -62,7 +184,7 @@ const RFQList = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-0 w-full max-w-full overflow-x-hidden">
       <div className="glow glow-gold left-1/4 top-1/3" />
 
       <div className="mb-8 relative z-10">
@@ -134,8 +256,7 @@ const RFQList = () => {
         </div>
       )}
 
-      <div className="border border-border-light dark:border-white/10 rounded-xl overflow-hidden relative z-10 bg-white dark:bg-navy shadow-card">
-        <div className="overflow-x-auto">
+      <div className="border border-border-light dark:border-white/10 rounded-xl relative z-10 bg-white dark:bg-navy shadow-card overflow-x-auto">
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-border-light dark:border-white/10 bg-ivory dark:bg-navy-light">
@@ -144,14 +265,13 @@ const RFQList = () => {
                 <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Status</th>
                 <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Priority SLA</th>
                 <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Date</th>
-                <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">AI Audit</th>
                 <th scope="col" className="px-5 py-3.5 text-right text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Actions</th>
               </tr>
             </thead>
             <tbody>
               {rfqs.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-5 py-12 text-center">
+                  <td colSpan="6" className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <FileSearch size={32} className="text-slate-300 dark:text-white/30" />
                       <p className="text-sm font-mono text-slate-400 dark:text-white/60">No records match your filter criteria</p>
@@ -162,7 +282,8 @@ const RFQList = () => {
                 rfqs.map((rfq) => (
                   <tr
                     key={rfq.id}
-                    className={`border-b border-border-light dark:border-white/5 transition-all duration-150 hover:shadow-gold hover:bg-gold/[0.02] ${
+                    onClick={() => handleEditRFQ(rfq)}
+                    className={`border-b border-border-light dark:border-white/5 transition-all duration-150 hover:shadow-gold hover:bg-gold/[0.02] cursor-pointer ${
                       rfq.priority === 'urgent' ? 'bg-danger/[0.02]' : ''
                     }`}
                   >
@@ -191,28 +312,36 @@ const RFQList = () => {
                           })
                         : '-'}
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      {rfq.ai_processed ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider font-mono bg-gold/10 text-gold border border-dashed border-gold/40">
-                          Parsed
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider font-mono bg-ivory dark:bg-navy-light text-slate-400 dark:text-white/60 border border-dashed border-border-light dark:border-white/20">
-                          Unprocessed
-                        </span>
-                      )}
-                    </td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-right">
                       <button
-                        onClick={() => setQuickView(quickView?.id === rfq.id ? null : rfq)}
+                        onClick={async () => {
+                          if (quickView?.id === rfq.id) {
+                            setQuickView(null);
+                            setQuickViewDetail(null);
+                            return;
+                          }
+                          setQuickView(rfq);
+                          setQuickViewLoading(true);
+                          setQuickViewDetail(null);
+                          try {
+                            const detail = await rfqService.getRFQById(rfq.id);
+                            setQuickViewDetail(detail);
+                          } catch {
+                            setQuickViewDetail(null);
+                          } finally {
+                            setQuickViewLoading(false);
+                          }
+                        }}
                         className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-gold hover:text-gold-dark transition-colors duration-200 mr-4"
                       >
                         <Eye size={14} />
-                        Quick View
                       </button>
-                      <button className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-navy dark:text-gold hover:text-navy-light dark:hover:text-gold-light transition-colors duration-200">
-                        <FileSearch size={14} />
-                        Audit
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleEditRFQ(rfq); }}
+                        className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-navy dark:text-gold hover:text-navy-light dark:hover:text-gold-light transition-colors duration-200"
+                      >
+                        <Edit3 size={14} />
+                        Edit
                       </button>
                     </td>
                   </tr>
@@ -220,31 +349,308 @@ const RFQList = () => {
               )}
             </tbody>
           </table>
-        </div>
       </div>
 
       {quickView && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white dark:bg-navy rounded-xl shadow-card border border-border-light dark:border-white/10 p-6 max-w-md w-full mx-4 animate-fadeInUp">
+          <div className="bg-white dark:bg-navy rounded-xl shadow-card border border-border-light dark:border-white/10 p-6 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto animate-fadeInUp">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-700 dark:text-white font-mono">{quickView.rfq_number}</h3>
-              <button onClick={() => setQuickView(null)} className="text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white">
+              <button onClick={() => { setQuickView(null); setQuickViewDetail(null); }} className="text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white">
                 <X size={18} />
               </button>
             </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-slate-400 dark:text-white/60">Company</span><span className="text-slate-700 dark:text-white font-medium">{quickView.company_name}</span></div>
-              <div className="flex justify-between"><span className="text-slate-400 dark:text-white/60">Status</span><span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider border ${statusPills[quickView.status] || ''}`}>{quickView.status}</span></div>
-              <div className="flex justify-between"><span className="text-slate-400 dark:text-white/60">Priority</span><span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider border ${priorityPills[quickView.priority] || ''}`}>{quickView.priority}</span></div>
-              <div className="flex justify-between"><span className="text-slate-400 dark:text-white/60">Date</span><span className="text-slate-700 dark:text-white font-mono">{quickView.email_received_at ? new Date(quickView.email_received_at).toLocaleDateString() : '-'}</span></div>
-              {quickView.ai_processed && (
-                <div className="pt-3 border-t border-border-light dark:border-white/10">
-                  <p className="text-[9px] font-mono uppercase tracking-wider text-slate-400 dark:text-white/60 mb-2">AI Analysis</p>
-                  <pre className="text-xs bg-navy dark:bg-navy-dark text-gold p-3 rounded-lg overflow-x-auto font-mono">
-                    {JSON.stringify(quickView.ai_analysis || { status: 'parsed', confidence: 'high' }, null, 2)}
-                  </pre>
+
+            <div className="space-y-3 text-sm mb-4">
+              <div className="flex justify-between">
+                <span className="text-slate-400 dark:text-white/60">Company</span>
+                <span className="text-slate-700 dark:text-white font-medium">{quickView.company_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 dark:text-white/60">Status</span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider border ${statusPills[quickView.status] || ''}`}>{quickView.status}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 dark:text-white/60">Priority</span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider border ${priorityPills[quickView.priority] || ''}`}>{quickView.priority}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400 dark:text-white/60">Date</span>
+                <span className="text-slate-700 dark:text-white font-mono">{quickView.email_received_at ? new Date(quickView.email_received_at).toLocaleDateString() : '-'}</span>
+              </div>
+            </div>
+
+            {quickViewLoading && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 size={20} className="animate-spin text-gold" />
+              </div>
+            )}
+
+            {quickViewDetail && quickViewDetail.items && quickViewDetail.items.length > 0 && (
+              <div className="border-t border-border-light dark:border-white/10 pt-4">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-slate-400 dark:text-white/60 mb-3">Order Items</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-border-light dark:border-white/10">
+                        <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Item</th>
+                        <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Code</th>
+                        <th className="text-right py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Qty</th>
+                        <th className="text-right py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Unit</th>
+                        <th className="text-right py-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quickViewDetail.items.map((item, idx) => (
+                        <tr key={item.id || idx} className="border-b border-border-light dark:border-white/5">
+                          <td className="py-2 pr-2 text-slate-700 dark:text-white">{item.item_name || item.description || '-'}</td>
+                          <td className="py-2 pr-2 text-slate-400 dark:text-white/60 font-mono">{item.item_code || '-'}</td>
+                          <td className="py-2 pr-2 text-right text-slate-700 dark:text-white font-mono">{item.quantity}</td>
+                          <td className="py-2 pr-2 text-right text-slate-400 dark:text-white/60 font-mono">{item.unit || '-'}</td>
+                          <td className="py-2 text-right text-slate-700 dark:text-white font-mono">
+                            {item.total_price ? `$${parseFloat(item.total_price).toFixed(2)}` : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
+              </div>
+            )}
+
+            {quickViewDetail && quickViewDetail.items && quickViewDetail.items.length === 0 && (
+              <div className="border-t border-border-light dark:border-white/10 pt-4">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-slate-400 dark:text-white/60 mb-3">Order Items</p>
+                {quickViewDetail.items_description ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400 dark:text-white/60">Description</span>
+                      <span className="text-slate-700 dark:text-white text-right max-w-[60%]">{quickViewDetail.items_description}</span>
+                    </div>
+                    {quickViewDetail.quantity && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-400 dark:text-white/60">Quantity</span>
+                        <span className="text-slate-700 dark:text-white font-mono">{quickViewDetail.quantity}</span>
+                      </div>
+                    )}
+                    {quickViewDetail.specifications && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-400 dark:text-white/60">Specifications</span>
+                        <span className="text-slate-700 dark:text-white text-right max-w-[60%]">{quickViewDetail.specifications}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 dark:text-white/60 italic">No items recorded</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {editRFQ && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => { setEditRFQ(null); setEditDetail(null); }} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-navy shadow-xl border-l border-border-light dark:border-white/10 animate-slideInRight overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-navy border-b border-border-light dark:border-white/10 px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-semibold text-slate-700 dark:text-white font-mono">
+                Edit {editRFQ.rfq_number}
+              </h2>
+              <button onClick={() => { setEditRFQ(null); setEditDetail(null); }} className="text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            {editLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={24} className="animate-spin text-gold" />
+              </div>
+            ) : editDetail ? (
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">RFQ Number</label>
+                    <input type="text" value={editDetail.rfq_number || ''} onChange={(e) => handleEditChange('rfq_number', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Company</label>
+                    <input type="text" value={editDetail.company_name || ''} onChange={(e) => handleEditChange('company_name', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Status</label>
+                    <select value={editDetail.status || 'pending'} onChange={(e) => handleEditChange('status', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold">
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="completed">Completed</option>
+                      <option value="rejected">Rejected</option>
+                      <option value="fulfilled">Fulfilled</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Priority</label>
+                    <select value={editDetail.priority || 'medium'} onChange={(e) => handleEditChange('priority', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Email Subject</label>
+                    <input type="text" value={editDetail.email_subject || ''} onChange={(e) => handleEditChange('email_subject', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Email Sender</label>
+                    <input type="text" value={editDetail.email_sender || ''} onChange={(e) => handleEditChange('email_sender', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold" />
+                  </div>
+                </div>
+
+                <div className="border-t border-border-light dark:border-white/10 pt-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-3 text-slate-400 dark:text-white/60 font-mono">Order Details</p>
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Budget ($)</label>
+                      <input type="number" step="0.01" value={editDetail.budget || ''} onChange={(e) => handleEditChange('budget', e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Delivery Date</label>
+                      <input type="date" value={editDetail.delivery_date || ''} onChange={(e) => handleEditChange('delivery_date', e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Items</p>
+                    <button type="button" onClick={handleAddItem}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider bg-gold/10 text-gold border border-gold/30 rounded hover:bg-gold/20 transition-all"
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto mb-4">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border-light dark:border-white/10">
+                          <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Code</th>
+                          <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Description</th>
+                          <th className="text-right py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Qty</th>
+                          <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Unit</th>
+                          <th className="text-right py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Unit $</th>
+                          <th className="text-right py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Total $</th>
+                          <th className="py-2 w-8" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {editItems.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="py-6 text-center text-slate-400 dark:text-white/60 italic">No items. Click "Add Item" to add one.</td>
+                          </tr>
+                        ) : (
+                          editItems.map((item, idx) => (
+                            <tr key={item.id || `new-${idx}`} className="border-b border-border-light dark:border-white/5">
+                              <td className="py-1.5 pr-2">
+                                <input type="text" value={item.item_code || ''} onChange={(e) => handleItemChange(idx, 'item_code', e.target.value)}
+                                  className="w-full px-2 py-1 rounded bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-xs focus:outline-none focus:border-gold" />
+                              </td>
+                              <td className="py-1.5 pr-2">
+                                <input type="text" value={item.description || ''} onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                                  className="w-full px-2 py-1 rounded bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-xs focus:outline-none focus:border-gold" />
+                              </td>
+                              <td className="py-1.5 pr-2">
+                                <input type="number" value={item.quantity || ''} onChange={(e) => handleItemChange(idx, 'quantity', e.target.value === '' ? 0 : Number(e.target.value))}
+                                  className="w-16 px-2 py-1 rounded bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-xs text-right focus:outline-none focus:border-gold" />
+                              </td>
+                              <td className="py-1.5 pr-2">
+                                <input type="text" value={item.unit || ''} onChange={(e) => handleItemChange(idx, 'unit', e.target.value)}
+                                  className="w-14 px-2 py-1 rounded bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-xs focus:outline-none focus:border-gold" />
+                              </td>
+                              <td className="py-1.5 pr-2">
+                                <input type="number" step="0.01" value={item.unit_price || ''} onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value === '' ? null : Number(e.target.value))}
+                                  className="w-20 px-2 py-1 rounded bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-xs text-right focus:outline-none focus:border-gold" />
+                              </td>
+                              <td className="py-1.5 pr-2">
+                                <input type="number" step="0.01" value={item.total_price || ''} onChange={(e) => handleItemChange(idx, 'total_price', e.target.value === '' ? null : Number(e.target.value))}
+                                  className="w-20 px-2 py-1 rounded bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-xs text-right focus:outline-none focus:border-gold" />
+                              </td>
+                              <td className="py-1.5">
+                                <button type="button" onClick={() => handleRemoveItem(idx)}
+                                  className="text-danger/60 hover:text-danger transition-colors">
+                                  <Trash2 size={12} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="border-t border-border-light dark:border-white/10 pt-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-3 text-slate-400 dark:text-white/60 font-mono">Notes</p>
+                  <textarea rows={3} value={editDetail.notes || ''} onChange={(e) => handleEditChange('notes', e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold resize-none" />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-border-light dark:border-white/10">
+                  <button
+                    onClick={() => setDeleteConfirm(editRFQ)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-danger/30 text-danger hover:bg-danger/10 text-sm font-medium transition-all duration-200"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setEditRFQ(null); setEditDetail(null); }}
+                      className="px-4 py-2.5 rounded-lg border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white text-sm transition-all duration-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleEditSave}
+                      disabled={saving}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-gold text-white rounded-lg text-sm font-semibold hover:bg-gold-dark transition-all duration-200 disabled:opacity-50"
+                    >
+                      <Save size={16} />
+                      {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white dark:bg-navy rounded-xl shadow-card border border-border-light dark:border-white/10 p-6 max-w-sm w-full mx-4 animate-fadeInUp">
+            <h3 className="text-lg font-semibold text-slate-700 dark:text-white mb-2">Delete RFQ</h3>
+            <p className="text-sm text-slate-400 dark:text-white/60 mb-6">
+              Are you sure you want to delete <span className="font-semibold text-slate-700 dark:text-white">{deleteConfirm.rfq_number}</span>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-lg border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white text-sm transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditDelete}
+                className="px-4 py-2 rounded-lg bg-danger text-white text-sm font-semibold hover:bg-danger/90 transition-all duration-200"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>

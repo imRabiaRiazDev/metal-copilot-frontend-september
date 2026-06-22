@@ -1,7 +1,9 @@
-import axios from 'axios';
 import { getToken } from './authService';
+import createApiClient from './httpClient';
 
 const API_BASE_URL = '/api/rfq';
+
+const api = createApiClient();
 
 const getHeaders = () => ({
   headers: { Authorization: `Bearer ${getToken()}` },
@@ -9,52 +11,67 @@ const getHeaders = () => ({
 
 const rfqService = {
   getRFQs: async (params = {}) => {
-    const res = await axios.get(`${API_BASE_URL}/rfqs/`, { ...getHeaders(), params });
+    const res = await api.get(`${API_BASE_URL}/orders/`, { ...getHeaders(), params });
     return res.data;
   },
 
   getRFQById: async (id) => {
-    const res = await axios.get(`${API_BASE_URL}/rfqs/${id}/`, getHeaders());
+    const res = await api.get(`${API_BASE_URL}/orders/${id}/`, getHeaders());
     return res.data;
   },
 
-  createRFQ: async (rfqData) => {
-    const res = await axios.post(`${API_BASE_URL}/rfqs/`, rfqData, getHeaders());
+  createRFQ: async (data) => {
+    const res = await api.post(`${API_BASE_URL}/orders/`, data, getHeaders());
     return res.data;
   },
 
-  updateRFQ: async (id, rfqData) => {
-    const res = await axios.put(`${API_BASE_URL}/rfqs/${id}/`, rfqData, getHeaders());
+  updateRFQ: async (id, data) => {
+    const res = await api.put(`${API_BASE_URL}/orders/${id}/`, data, getHeaders());
     return res.data;
   },
 
   deleteRFQ: async (id) => {
-    const res = await axios.delete(`${API_BASE_URL}/rfqs/${id}/`, getHeaders());
+    const res = await api.delete(`${API_BASE_URL}/orders/${id}/`, getHeaders());
     return res.data;
   },
 
   reviewRFQ: async (id, reviewData) => {
-    const res = await axios.post(`${API_BASE_URL}/rfqs/${id}/review/`, reviewData, getHeaders());
+    const res = await api.post(`${API_BASE_URL}/orders/${id}/review/`, reviewData, getHeaders());
     return res.data;
   },
 
   getAnalytics: async () => {
-    const res = await axios.get(`${API_BASE_URL}/rfqs/analytics/`, getHeaders());
+    const res = await api.get(`${API_BASE_URL}/orders/analytics/`, getHeaders());
     return res.data;
   },
 
   getDashboardStats: async () => {
-    const res = await axios.get(`${API_BASE_URL}/rfqs/dashboard_stats/`, getHeaders());
+    const res = await api.get(`${API_BASE_URL}/orders/dashboard_stats/`, getHeaders());
     return res.data;
   },
 
-  getRFQItems: async (rfqId) => {
-    const res = await axios.get(`${API_BASE_URL}/items/?rfq_id=${rfqId}`, getHeaders());
+  getRFQItems: async (orderId) => {
+    const res = await api.get(`${API_BASE_URL}/items/?order_id=${orderId}`, getHeaders());
     return res.data;
   },
 
-  getRFQAttachments: async (rfqId) => {
-    const res = await axios.get(`${API_BASE_URL}/attachments/?rfq_id=${rfqId}`, getHeaders());
+  createRFQItem: async (data) => {
+    const res = await api.post(`${API_BASE_URL}/items/`, data, getHeaders());
+    return res.data;
+  },
+
+  updateRFQItem: async (id, data) => {
+    const res = await api.put(`${API_BASE_URL}/items/${id}/`, data, getHeaders());
+    return res.data;
+  },
+
+  deleteRFQItem: async (id) => {
+    const res = await api.delete(`${API_BASE_URL}/items/${id}/`, getHeaders());
+    return res.data;
+  },
+
+  getRFQAttachments: async (orderId) => {
+    const res = await api.get(`${API_BASE_URL}/attachments/?order_id=${orderId}`, getHeaders());
     return res.data;
   },
 };

@@ -1,27 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, microsoftLogin } from '../services/authService';
+import { login } from '../services/authService';
 import { Eye, EyeOff, Loader2, KanbanSquare } from 'lucide-react';
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [microsoftLoading, setMicrosoftLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('login') === 'success') {
-      setTimeout(() => navigate('/home'), 500);
-    }
-    const loginError = urlParams.get('error');
-    if (loginError) {
-      setError(`Microsoft login failed: ${loginError}`);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -42,42 +29,6 @@ const Login = () => {
       setError(err.error || err.username || err.password || 'Authentication failed.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleMicrosoftLogin = async () => {
-    setError('');
-    setMicrosoftLoading(true);
-    try {
-      const response = await microsoftLogin();
-      if (response.success && response.auth_url) {
-        const width = 600;
-        const height = 700;
-        const left = (window.screen.width - width) / 2;
-        const top = (window.screen.height - height) / 2;
-        const popup = window.open(
-          response.auth_url,
-          'Microsoft Login',
-          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-        );
-        if (!popup) {
-          setError('Popup blocked. Please allow popups for this site.');
-          setMicrosoftLoading(false);
-          return;
-        }
-        const checkClosed = setInterval(() => {
-          if (popup.closed) {
-            clearInterval(checkClosed);
-            setMicrosoftLoading(false);
-          }
-        }, 500);
-      } else {
-        setError('Failed to initiate Microsoft login');
-        setMicrosoftLoading(false);
-      }
-    } catch (err) {
-      setError(err.error || 'Microsoft login failed');
-      setMicrosoftLoading(false);
     }
   };
 
@@ -201,42 +152,6 @@ const Login = () => {
                 </>
               ) : (
                 'Access Terminal'
-              )}
-            </button>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border-light dark:border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="px-3 bg-ivory dark:bg-navy-dark text-slate-400 dark:text-white/40 font-mono text-[10px]">Or continue with</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleMicrosoftLogin}
-              disabled={microsoftLoading}
-              className="w-full py-2.5 px-4 rounded-lg border-2 border-gold/50 text-slate-600 dark:text-white/80 hover:bg-gold/5 dark:hover:bg-gold/10 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              {microsoftLoading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Connecting
-                </>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 23 23" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11.5 0L0 6.5V16.5L11.5 23L23 16.5V6.5L11.5 0Z" fill="#F3F3F3" />
-                    <path d="M11.5 0V11.5V23L0 16.5V6.5L11.5 0Z" fill="#E5E5E5" />
-                    <path d="M11.5 0L0 6.5L11.5 11.5L23 6.5L11.5 0Z" fill="#F3F3F3" />
-                    <path d="M11.5 11.5L0 6.5V16.5L11.5 11.5Z" fill="#E5E5E5" />
-                    <path d="M11.5 11.5L23 6.5V16.5L11.5 11.5Z" fill="#D4D4D4" />
-                    <path d="M11.5 0V11.5V23L0 16.5V6.5L11.5 0Z" fill="#0078D4" />
-                    <path d="M11.5 0V11.5V23L23 16.5V6.5L11.5 0Z" fill="#106EBE" />
-                  </svg>
-                  Sign in with Microsoft
-                </>
               )}
             </button>
           </form>

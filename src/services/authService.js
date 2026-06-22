@@ -2,17 +2,11 @@
  * Authentication Service
  * Handles all API calls related to authentication
  */
-import axios from 'axios';
+import createApiClient from './httpClient';
 
 const API_BASE_URL = 'http://localhost:8000/api/auth';
 
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const api = createApiClient(API_BASE_URL);
 
 /**
  * Login function
@@ -50,13 +44,32 @@ export const getProtectedData = async (token) => {
   }
 };
 
+export const decodeToken = (token) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+};
+
+const isTokenExpired = (token) => {
+  const payload = decodeToken(token);
+  if (!payload || !payload.exp) return true;
+  return Date.now() >= payload.exp * 1000;
+};
+
 /**
  * Check if user is authenticated
- * @returns {boolean} - True if token exists in localStorage
+ * @returns {boolean} - True if a valid, non-expired token exists in localStorage
  */
 export const isAuthenticated = () => {
   const token = localStorage.getItem('access_token');
-  return !!token;
+  if (!token) return false;
+  if (isTokenExpired(token)) {
+    logout();
+    return false;
+  }
+  return true;
 };
 
 /**
@@ -106,6 +119,24 @@ export const refreshMicrosoftToken = async () => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { error: 'Token refresh failed' };
+  }
+};
+
+/**
+ * Get Microsoft account connection status
+ * @returns {Promise} - Response with connection status
+ */
+export const getMicrosoftStatus = async () => {
+  try {
+    const token = getToken();
+    const response = await api.get('/microsoft/status/', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { error: 'Failed to get status' };
   }
 };
 

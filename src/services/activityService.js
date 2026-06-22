@@ -1,7 +1,9 @@
-import axios from 'axios';
 import { getToken } from './authService';
+import createApiClient from './httpClient';
 
 const API_BASE = '/api/activity';
+
+const api = createApiClient();
 
 const getHeaders = () => ({
   headers: { Authorization: `Bearer ${getToken()}` },
@@ -9,7 +11,7 @@ const getHeaders = () => ({
 
 const activityService = {
   getActivity: async (entityType, entityId) => {
-    const res = await axios.get(`${API_BASE}/`, {
+    const res = await api.get(`${API_BASE}/`, {
       ...getHeaders(),
       params: { entity_type: entityType, entity_id: entityId },
     });
@@ -17,7 +19,7 @@ const activityService = {
   },
 
   addNote: async (entityType, entityId, text) => {
-    const res = await axios.post(
+    const res = await api.post(
       `${API_BASE}/notes/`,
       { entity_type: entityType, entity_id: entityId, text },
       getHeaders()
