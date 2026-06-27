@@ -99,6 +99,11 @@ const rfqService = {
     const res = await api.get(`${API_BASE_URL}/orders/${orderId}/suppliers/`, getHeaders());
     return res.data;
   },
+
+  syncToBusinessCentral: async (orderId) => {
+    const res = await api.post(`${API_BASE_URL}/monitor/bc/${orderId}/`, {}, getHeaders());
+    return res.data;
+  },
 };
 
 export default rfqService;

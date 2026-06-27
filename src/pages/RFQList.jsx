@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import rfqService from '../services/rfqService';
 import contactService from '../services/contactService';
-import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch, Mail } from 'lucide-react';
+import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch, Mail, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusPills = {
@@ -68,6 +68,7 @@ const RFQList = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [dispatching, setDispatching] = useState(false);
+  const [syncingId, setSyncingId] = useState(null);
 
   const handleEditRFQ = async (rfq) => {
     setEditRFQ(rfq);
@@ -224,6 +225,20 @@ const RFQList = () => {
     }
   };
 
+  const handleSyncToBusinessCentral = async (rfq, e) => {
+    e.stopPropagation();
+    setSyncingId(rfq.id);
+    try {
+      const response = await rfqService.syncToBusinessCentral(rfq.id);
+      toast.success(response.message || 'Business Central sync started');
+      await fetchRFQs();
+    } catch {
+      toast.error('Failed to start Business Central sync');
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-[calc(100vh-100px)] gap-3">
@@ -364,7 +379,8 @@ const RFQList = () => {
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-right">
                       <button
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.stopPropagation();
                           if (quickView?.id === rfq.id) {
                             setQuickView(null);
                             setQuickViewDetail(null);
@@ -382,9 +398,17 @@ const RFQList = () => {
                             setQuickViewLoading(false);
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-gold hover:text-gold-dark transition-colors duration-200 mr-4"
+                        className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-gold hover:text-gold-dark transition-colors duration-200 mr-3"
                       >
                         <Eye size={14} />
+                      </button>
+                      <button
+                        onClick={(e) => handleSyncToBusinessCentral(rfq, e)}
+                        disabled={syncingId === rfq.id}
+                        className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-gold hover:text-gold-dark transition-colors duration-200 mr-3 disabled:opacity-60"
+                      >
+                        {syncingId === rfq.id ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                        Sync BC
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEditRFQ(rfq); }}
