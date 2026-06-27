@@ -290,7 +290,7 @@ const Deals = () => {
   }
 
   return (
-    <div className="min-h-0 w-full animate-fadeInUp">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-700 dark:text-white mb-1">
@@ -308,7 +308,8 @@ const Deals = () => {
         </button>
       </div>
 
-      {deals.length === 0 ? (
+      <div className="max-w-[calc(100vw-320px)] overflow-x-auto">
+        {deals.length === 0 ? (
         <EmptyState
           icon={KanbanSquare}
           title="Start your pipeline"
@@ -318,11 +319,11 @@ const Deals = () => {
         />
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 pb-4 overflow-x-auto" style={{ minHeight: 'calc(100vh - 200px)' }}>
+          <div className="flex flex-nowrap gap-4 pb-4" style={{ width: '1800px' }}>
             {stages.map((stage) => {
               const stageDeals = getStageDeals(stage.key);
               return (
-                <div key={stage.key} className="flex-shrink-0 w-72">
+                <div key={stage.key} className="flex-shrink-0 w-72 min-w-[288px]">
                   <div className="flex items-center justify-between mb-3 px-1">
                     <div className="flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${stage.color.replace('border-', 'bg-')}`} />
@@ -363,6 +364,7 @@ const Deals = () => {
           </div>
         </DragDropContext>
       )}
+      </div>
 
       {drawerOpen && (
         <DealDrawer

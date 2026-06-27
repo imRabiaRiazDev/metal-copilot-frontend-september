@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   CheckSquare,
   Plus,
@@ -30,7 +31,7 @@ const columns = [
   { key: 'completed', label: 'Completed', color: 'border-emerald' },
 ];
 
-const TaskCard = ({ task, onToggle, onDelete }) => {
+const TaskCard = ({ task, onToggle, onDelete, onClick }) => {
   const isOverdue = task.due_date && isPast(parseISO(task.due_date)) && !task.completed;
   const isDueToday = task.due_date && isToday(parseISO(task.due_date)) && !task.completed;
 
@@ -44,11 +45,15 @@ const TaskCard = ({ task, onToggle, onDelete }) => {
 
   return (
     <div
-      className={`group bg-white dark:bg-navy rounded-lg p-4 mb-3 border border-border-light dark:border-white/10 border-l-4 ${columnColor} shadow-sm transition-all duration-200 hover:shadow-gold card-hover`}
+      onClick={onClick}
+      className={`group bg-white dark:bg-navy rounded-lg p-4 mb-3 border border-border-light dark:border-white/10 border-l-4 ${columnColor} shadow-sm transition-all duration-200 hover:shadow-gold card-hover cursor-pointer ${task.order ? 'hover:border-gold' : ''}`}
     >
       <div className="flex items-start gap-3">
         <button
-          onClick={() => onToggle(task)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle(task);
+          }}
           className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
             task.completed
               ? 'bg-emerald border-emerald text-white'
@@ -82,7 +87,10 @@ const TaskCard = ({ task, onToggle, onDelete }) => {
           </div>
         </div>
         <button
-          onClick={() => onDelete(task.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(task.id);
+          }}
           className="text-slate-300 dark:text-white/20 hover:text-danger transition-all opacity-0 group-hover:opacity-100"
         >
           <X size={14} />
@@ -96,6 +104,7 @@ const Tasks = () => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: tasksRaw, isLoading } = useQuery({
     queryKey: ['tasks'],
@@ -129,7 +138,24 @@ const Tasks = () => {
   });
 
   const toggleComplete = (task) => {
-    updateMutation.mutate({ id: task.id, data: { completed: !task.completed } });
+    const newStatus = !task.completed;
+    updateMutation.mutate({ id: task.id, data: { completed: newStatus } });
+    
+    // If task is being completed, delete it after a short delay
+    if (newStatus) {
+      setTimeout(() => {
+        deleteMutation.mutate(task.id);
+      }, 1000);
+    }
+  };
+
+  const handleTaskClick = (task) => {
+    // If task has an associated order (RFQ), navigate to it
+    if (task.order) {
+      navigate(`/rfqs`);
+      // Optionally, you could navigate to a specific RFQ detail view if available
+      // navigate(`/rfqs/${task.order.id}`);
+    }
   };
 
   const columnTasks = useMemo(() => {
@@ -193,12 +219,13 @@ const Tasks = () => {
           actionLabel="Add Task"
         />
       ) : (
-        <div className="flex gap-4 pb-4 overflow-x-auto" style={{ minHeight: 'calc(100vh - 200px)' }}>
+        <div className="max-w-[calc(100vw-320px)] overflow-x-auto">
+          <div className="flex gap-4 pb-4" style={{ minHeight: 'calc(100vh - 200px)', width: '1500px' }}>
           {columns.map((col) => {
             const items = columnTasks[col.key] || [];
             const isTodayCol = col.key === 'today';
             return (
-              <div key={col.key} className="flex-shrink-0 w-72">
+              <div key={col.key} className="flex-shrink-0 w-72 min-w-[288px]">
                 <div className="flex items-center justify-between mb-3 px-1">
                   <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${col.color.replace('border-', 'bg-')}`} />
@@ -223,6 +250,7 @@ const Tasks = () => {
                       task={task}
                       onToggle={toggleComplete}
                       onDelete={(id) => deleteMutation.mutate(id)}
+                      onClick={() => handleTaskClick(task)}
                     />
                   ))}
                   {items.length === 0 && (
@@ -261,6 +289,7 @@ const Tasks = () => {
               </div>
             );
           })}
+        </div>
         </div>
       )}
     </div>

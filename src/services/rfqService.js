@@ -74,6 +74,31 @@ const rfqService = {
     const res = await api.get(`${API_BASE_URL}/attachments/?order_id=${orderId}`, getHeaders());
     return res.data;
   },
+
+  getAvailableSuppliers: async () => {
+    const res = await api.get(`${API_BASE_URL}/orders/available_suppliers/`, getHeaders());
+    return res.data;
+  },
+
+  assignSupplier: async (orderId, supplierId, autoDispatch = false) => {
+    const res = await api.post(`${API_BASE_URL}/orders/${orderId}/assign_supplier/`, {
+      supplier_id: supplierId,
+      auto_dispatch: autoDispatch,
+    }, getHeaders());
+    return res.data;
+  },
+
+  dispatchToSupplier: async (orderId, supplierId) => {
+    const res = await api.post(`${API_BASE_URL}/orders/${orderId}/dispatch_to_supplier/`, {
+      supplier_id: supplierId,
+    }, getHeaders());
+    return res.data;
+  },
+
+  getOrderSuppliers: async (orderId) => {
+    const res = await api.get(`${API_BASE_URL}/orders/${orderId}/suppliers/`, getHeaders());
+    return res.data;
+  },
 };
 
 export default rfqService;

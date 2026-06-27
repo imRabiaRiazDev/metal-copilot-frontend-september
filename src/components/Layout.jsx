@@ -23,7 +23,7 @@ const Layout = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-ivory dark:bg-navy-dark">
       <Sidebar />
-      <main className="flex-1 ml-64 min-h-screen relative z-10 animate-fadeInUp">
+      <main className="flex-1 ml-64 relative z-10 animate-fadeInUp">
         <div className="p-8">
           {children || <Outlet />}
         </div>

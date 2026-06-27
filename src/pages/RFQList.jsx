@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import rfqService from '../services/rfqService';
-import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch } from 'lucide-react';
+import contactService from '../services/contactService';
+import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const statusPills = {
@@ -20,6 +22,7 @@ const priorityPills = {
 };
 
 const RFQList = () => {
+  const queryClient = useQueryClient();
   const [rfqs, setRfqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -62,6 +65,9 @@ const RFQList = () => {
   const [deletedItemIds, setDeletedItemIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedSupplier, setSelectedSupplier] = useState(null);
+  const [dispatching, setDispatching] = useState(false);
 
   const handleEditRFQ = async (rfq) => {
     setEditRFQ(rfq);
@@ -69,10 +75,20 @@ const RFQList = () => {
     setEditDetail(null);
     setEditItems([]);
     setDeletedItemIds([]);
+    setSelectedSupplier(null);
     try {
       const detail = await rfqService.getRFQById(rfq.id);
       setEditDetail(detail);
       setEditItems(detail.items || []);
+      
+      // Fetch available suppliers
+      const suppliersData = await rfqService.getAvailableSuppliers();
+      setSuppliers(suppliersData.suppliers || []);
+      
+      // Set current supplier if already assigned
+      if (detail.supplier_id) {
+        setSelectedSupplier(detail.supplier_id);
+      }
     } catch {
       toast.error('Failed to load RFQ details');
       setEditRFQ(null);
@@ -171,6 +187,40 @@ const RFQList = () => {
       fetchRFQs();
     } catch {
       toast.error('Failed to delete RFQ');
+    }
+  };
+
+  const handleAssignSupplier = async () => {
+    if (!editRFQ || !selectedSupplier) return;
+    try {
+      await rfqService.assignSupplier(editRFQ.id, selectedSupplier);
+      toast.success('Supplier assigned successfully');
+      // Refresh the RFQ detail to get updated supplier info
+      const detail = await rfqService.getRFQById(editRFQ.id);
+      setEditDetail(detail);
+      // Refresh tasks to move completed tasks to Completed column
+      queryClient.invalidateQueries(['tasks']);
+    } catch {
+      toast.error('Failed to assign supplier');
+    }
+  };
+
+  const handleDispatchToSupplier = async () => {
+    if (!editRFQ || !selectedSupplier) {
+      toast.error('Please select a supplier first');
+      return;
+    }
+    setDispatching(true);
+    try {
+      await rfqService.dispatchToSupplier(editRFQ.id, selectedSupplier);
+      toast.success('RFQ dispatched to supplier');
+      // Refresh the RFQ detail
+      const detail = await rfqService.getRFQById(editRFQ.id);
+      setEditDetail(detail);
+    } catch {
+      toast.error('Failed to dispatch RFQ to supplier');
+    } finally {
+      setDispatching(false);
     }
   };
 
@@ -509,6 +559,57 @@ const RFQList = () => {
                     <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Email Sender</label>
                     <input type="text" value={editDetail.email_sender || ''} onChange={(e) => handleEditChange('email_sender', e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold" />
+                  </div>
+                </div>
+
+                <div className="border-t border-border-light dark:border-white/10 pt-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-3 text-slate-400 dark:text-white/60 font-mono">Supplier Assignment</p>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Select Supplier</label>
+                      <select
+                        value={selectedSupplier || ''}
+                        onChange={(e) => setSelectedSupplier(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full px-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm focus:outline-none focus:border-gold transition-all duration-200"
+                      >
+                        <option value="">No supplier selected</option>
+                        {suppliers.map((supplier) => (
+                          <option key={supplier.id} value={supplier.id}>
+                            {supplier.company_name} {supplier.email ? `(${supplier.email})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleAssignSupplier}
+                        disabled={!selectedSupplier || saving}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gold/30 text-gold hover:bg-gold/10 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Save size={16} />
+                        Assign Supplier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDispatchToSupplier}
+                        disabled={!selectedSupplier || dispatching}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gold text-white hover:bg-gold-dark text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Mail size={16} />
+                        {dispatching ? 'Sending...' : 'Send RFQ Email'}
+                      </button>
+                    </div>
+                    {editDetail && editDetail.supplier_email_sent && (
+                      <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                        <span className="font-mono">Email sent to {editDetail.supplier_email} at {editDetail.supplier_email_sent_at ? new Date(editDetail.supplier_email_sent_at).toLocaleString() : ''}</span>
+                      </div>
+                    )}
+                    {editDetail && editDetail.supplier_email_error && (
+                      <div className="flex items-center gap-2 text-xs text-danger">
+                        <span className="font-mono">Email error: {editDetail.supplier_email_error}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
