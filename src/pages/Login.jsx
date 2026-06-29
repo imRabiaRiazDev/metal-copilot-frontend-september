@@ -20,6 +20,8 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       const response = await login(formData.username, formData.password);
       localStorage.setItem('access_token', response.access);
       localStorage.setItem('refresh_token', response.refresh);
