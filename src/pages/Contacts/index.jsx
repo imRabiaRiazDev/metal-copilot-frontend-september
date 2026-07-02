@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users,
@@ -17,6 +17,7 @@ import contactService from '../../services/contactService';
 import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
 import ContextMenu from '../../components/ContextMenu';
+import Pagination from '../../components/Pagination';
 import toast from 'react-hot-toast';
 
 const typeStyles = {
@@ -171,6 +172,8 @@ const Contacts = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const searchTimer = useRef(null);
   const queryClient = useQueryClient();
 
@@ -180,10 +183,21 @@ const Contacts = () => {
     return () => clearTimeout(searchTimer.current);
   }, [search]);
 
-  const { data: contacts = [], isLoading } = useQuery({
-    queryKey: ['contacts', activeTab],
-    queryFn: () => contactService.getContacts(activeTab === 'all' ? null : activeTab),
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, debouncedSearch, pageSize]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['contacts', activeTab, page, pageSize, debouncedSearch],
+    queryFn: () => contactService.getContacts(activeTab, {
+      page,
+      page_size: pageSize,
+      search: debouncedSearch || undefined,
+    }),
   });
+
+  const contacts = data?.results ?? [];
+  const total = data?.count ?? 0;
 
   const createMutation = useMutation({
     mutationFn: contactService.createContact,
@@ -210,19 +224,6 @@ const Contacts = () => {
     },
   });
 
-  const filtered = useMemo(() => {
-    if (!debouncedSearch) return contacts;
-    const q = debouncedSearch.toLowerCase();
-    return contacts.filter(
-      (c) =>
-        (c.company_name || '').toLowerCase().includes(q) ||
-        (c.contact_person || '').toLowerCase().includes(q) ||
-        (c.email || '').toLowerCase().includes(q) ||
-        (c.phone || '').toLowerCase().includes(q) ||
-        (c.tags || []).some((t) => t.toLowerCase().includes(q))
-    );
-  }, [contacts, debouncedSearch]);
-
   const toggleSelect = (id) => {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -230,10 +231,10 @@ const Contacts = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selected.length === filtered.length) {
+    if (selected.length === contacts.length) {
       setSelected([]);
     } else {
-      setSelected(filtered.map((c) => c.id));
+      setSelected(contacts.map((c) => c.id));
     }
   };
 
@@ -334,7 +335,7 @@ const Contacts = () => {
 
       {isLoading ? (
         <Skeleton rows={6} />
-      ) : filtered.length === 0 ? (
+      ) : contacts.length === 0 ? (
         <EmptyState
           icon={Users}
           title="Your trusted network begins here"
@@ -351,7 +352,7 @@ const Contacts = () => {
                   <th className="px-4 py-3.5 w-10">
                     <input
                       type="checkbox"
-                      checked={selected.length === filtered.length && filtered.length > 0}
+                      checked={selected.length === contacts.length && contacts.length > 0}
                       onChange={toggleSelectAll}
                       className="rounded border-border-light dark:border-white/20 text-gold focus:ring-gold"
                     />
@@ -365,7 +366,7 @@ const Contacts = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((contact) => (
+                {contacts.map((contact) => (
                   <tr
                     key={contact.id}
                     className={`border-b border-border-light dark:border-white/5 transition-all duration-150 hover:shadow-gold hover:bg-gold/[0.02] cursor-pointer ${
@@ -431,6 +432,14 @@ const Contacts = () => {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={page}
+            totalPages={total > 0 ? Math.ceil(total / pageSize) : 1}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
         </div>
       )}
 

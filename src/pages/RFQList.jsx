@@ -4,6 +4,7 @@ import rfqService from '../services/rfqService';
 import contactService from '../services/contactService';
 import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch, Mail, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
 
 const statusPills = {
   pending: 'bg-amber/10 text-amber border-amber/20',
@@ -27,13 +28,16 @@ const RFQList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({ status: '', priority: '', search: '' });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [total, setTotal] = useState(0);
   const [quickView, setQuickView] = useState(null);
   const [quickViewDetail, setQuickViewDetail] = useState(null);
   const [quickViewLoading, setQuickViewLoading] = useState(false);
 
   useEffect(() => {
     fetchRFQs();
-  }, [filters]);
+  }, [filters, page, pageSize]);
 
   const fetchRFQs = async () => {
     try {
@@ -42,8 +46,11 @@ const RFQList = () => {
       if (filters.status) params.status = filters.status;
       if (filters.priority) params.priority = filters.priority;
       if (filters.search) params.search = filters.search;
+      params.page = page;
+      params.page_size = pageSize;
       const data = await rfqService.getRFQs(params);
-      setRfqs(data);
+      setRfqs(data.results || []);
+      setTotal(data.count || 0);
       setError(null);
     } catch (err) {
       setError('Failed to fetch RFQ data');
@@ -56,6 +63,7 @@ const RFQList = () => {
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
+    setPage(1);
   };
 
   const [editRFQ, setEditRFQ] = useState(null);
@@ -423,6 +431,14 @@ const RFQList = () => {
               )}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            totalPages={total > 0 ? Math.ceil(total / pageSize) : 1}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={(p) => { setPage(p); }}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          />
       </div>
 
       {quickView && (

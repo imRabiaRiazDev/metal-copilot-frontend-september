@@ -10,8 +10,9 @@ const getHeaders = () => ({
 });
 
 const contactService = {
-  getContacts: async (type) => {
-    const params = type && type !== 'all' ? { type } : {};
+  getContacts: async (type, extraParams = {}) => {
+    const params = { ...extraParams };
+    if (type && type !== 'all') params.type = type;
     const res = await api.get(API_BASE, { ...getHeaders(), params });
     return res.data;
   },
