@@ -22,6 +22,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/home" element={<Home />} />
             <Route path="/rfqs" element={<RFQList />} />
+            <Route path="/rfqs/:rfqNumber" element={<RFQList />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/deals" element={<Deals />} />

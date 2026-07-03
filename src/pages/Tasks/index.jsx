@@ -10,6 +10,7 @@ import {
   Calendar,
   AlertCircle,
   Flag,
+  FileSearch,
 } from 'lucide-react';
 import taskService from '../../services/taskService';
 import EmptyState from '../../components/EmptyState';
@@ -31,7 +32,7 @@ const columns = [
   { key: 'completed', label: 'Completed', color: 'border-emerald' },
 ];
 
-const TaskCard = ({ task, onToggle, onDelete, onClick }) => {
+const TaskCard = ({ task, onToggle, onDelete, onClick, onRFQClick }) => {
   const isOverdue = task.due_date && isPast(parseISO(task.due_date)) && !task.completed;
   const isDueToday = task.due_date && isToday(parseISO(task.due_date)) && !task.completed;
 
@@ -43,10 +44,31 @@ const TaskCard = ({ task, onToggle, onDelete, onClick }) => {
     ? 'border-l-gold'
     : 'border-l-navy dark:border-l-gold';
 
+  // Extract RFQ number from title if present - more flexible pattern
+  const rfqMatch = task.title.match(/RFQ[-\s]?([A-Z0-9-]+)/i);
+  const rfqNumber = rfqMatch ? `RFQ-${rfqMatch[1]}` : null;
+
+  // Split title into parts
+  let titleBeforeRFQ = task.title;
+  let titleAfterRFQ = '';
+  if (rfqNumber) {
+    const parts = task.title.split(new RegExp(rfqMatch[0], 'i'));
+    titleBeforeRFQ = parts[0] || '';
+    titleAfterRFQ = parts[1] || '';
+  }
+
+  const handleCardClick = () => {
+    if (rfqNumber) {
+      onRFQClick(task);
+    } else {
+      onClick(task);
+    }
+  };
+
   return (
     <div
-      onClick={onClick}
-      className={`group bg-white dark:bg-navy rounded-lg p-4 mb-3 border border-border-light dark:border-white/10 border-l-4 ${columnColor} shadow-sm transition-all duration-200 hover:shadow-gold card-hover cursor-pointer ${task.order ? 'hover:border-gold' : ''}`}
+      onClick={handleCardClick}
+      className={`group bg-white dark:bg-navy rounded-lg p-4 mb-3 border border-border-light dark:border-white/10 border-l-4 ${columnColor} shadow-sm transition-all duration-200 hover:shadow-gold card-hover cursor-pointer ${rfqNumber ? 'hover:border-gold' : ''}`}
     >
       <div className="flex items-start gap-3">
         <button
@@ -65,7 +87,13 @@ const TaskCard = ({ task, onToggle, onDelete, onClick }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className={`text-sm font-medium ${task.completed ? 'line-through text-slate-400 dark:text-white/60' : 'text-slate-700 dark:text-white'}`}>
-              {task.title}
+              {titleBeforeRFQ}
+              {rfqNumber && (
+                <span className="text-gold font-mono mx-0.5">
+                  {rfqNumber}
+                </span>
+              )}
+              {titleAfterRFQ}
             </span>
             {task.priority && (
               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-mono font-semibold uppercase tracking-wider border ${priorityColors[task.priority] || ''}`}>
@@ -103,6 +131,7 @@ const TaskCard = ({ task, onToggle, onDelete, onClick }) => {
 const Tasks = () => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -150,11 +179,21 @@ const Tasks = () => {
   };
 
   const handleTaskClick = (task) => {
-    // If task has an associated order (RFQ), navigate to it
-    if (task.order) {
-      navigate(`/rfqs`);
-      // Optionally, you could navigate to a specific RFQ detail view if available
-      // navigate(`/rfqs/${task.order.id}`);
+    setSelectedTask(task);
+  };
+
+  const handleRFQClick = (task) => {
+    // Extract RFQ number from title - more flexible pattern
+    const rfqMatch = task.title.match(/RFQ[-\s]?([A-Z0-9-]+)/i);
+    const rfqNumber = rfqMatch ? `RFQ-${rfqMatch[1]}` : null;
+    
+    console.log('Task title:', task.title);
+    console.log('Extracted RFQ number:', rfqNumber);
+    
+    if (rfqNumber) {
+      navigate(`/rfqs/${rfqNumber}`);
+    } else if (task.order) {
+      navigate(`/rfqs`, { state: { openRFQId: task.order.id } });
     }
   };
 
@@ -251,6 +290,7 @@ const Tasks = () => {
                       onToggle={toggleComplete}
                       onDelete={(id) => deleteMutation.mutate(id)}
                       onClick={() => handleTaskClick(task)}
+                      onRFQClick={handleRFQClick}
                     />
                   ))}
                   {items.length === 0 && (
@@ -290,6 +330,98 @@ const Tasks = () => {
             );
           })}
         </div>
+        </div>
+      )}
+
+      {selectedTask && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setSelectedTask(null)} />
+          <div className="relative w-full max-w-md bg-white dark:bg-navy shadow-xl border-l border-border-light dark:border-white/10 animate-slideInRight overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-navy border-b border-border-light dark:border-white/10 px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-semibold text-slate-700 dark:text-white font-mono">
+                Task Details
+              </h2>
+              <button onClick={() => setSelectedTask(null)} className="text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div>
+                <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Title</label>
+                <p className="text-sm text-slate-700 dark:text-white">{selectedTask.title}</p>
+              </div>
+
+              {selectedTask.description && (
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Description</label>
+                  <p className="text-sm text-slate-700 dark:text-white">{selectedTask.description}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Status</label>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider border ${
+                    selectedTask.completed ? 'bg-emerald/10 text-emerald border-emerald/20' : 'bg-amber/10 text-amber border-amber/20'
+                  }`}>
+                    {selectedTask.completed ? 'Completed' : 'Pending'}
+                  </span>
+                </div>
+
+                {selectedTask.priority && (
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Priority</label>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider border ${priorityColors[selectedTask.priority] || ''}`}>
+                      {selectedTask.priority}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {selectedTask.due_date && (
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Due Date</label>
+                  <p className="text-sm text-slate-700 dark:text-white font-mono">
+                    {format(parseISO(selectedTask.due_date), 'MMM d, yyyy')}
+                  </p>
+                </div>
+              )}
+
+              {selectedTask.order && (
+                <div className="border-t border-border-light dark:border-white/10 pt-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider mb-3 text-slate-400 dark:text-white/60 font-mono">Related RFQ</p>
+                  <button
+                    onClick={() => {
+                      // Extract RFQ number from title
+                      const rfqMatch = selectedTask.title.match(/RFQ[-\s]?([A-Z0-9]+)/i);
+                      const rfqNumber = rfqMatch ? `RFQ-${rfqMatch[1]}` : null;
+                      
+                      if (rfqNumber) {
+                        navigate(`/rfqs/${rfqNumber}`);
+                      } else {
+                        navigate(`/rfqs`, { state: { openRFQId: selectedTask.order.id } });
+                      }
+                      setSelectedTask(null);
+                    }}
+                    className="w-full px-4 py-3 rounded-lg bg-gold/10 border border-gold/20 text-gold hover:bg-gold/20 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <FileSearch size={16} />
+                    Open RFQ
+                  </button>
+                </div>
+              )}
+
+              {selectedTask.entity_name && (
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">
+                    {selectedTask.entity_type === 'contact' ? 'Related Contact' : 'Related Deal'}
+                  </label>
+                  <p className="text-sm text-slate-700 dark:text-white">{selectedTask.entity_name}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

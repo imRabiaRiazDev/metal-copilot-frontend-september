@@ -104,6 +104,11 @@ const rfqService = {
     const res = await api.post(`${API_BASE_URL}/monitor/bc/${orderId}/`, {}, getHeaders());
     return res.data;
   },
+
+  bulkDeleteRFQs: async (ids) => {
+    const res = await api.post(`${API_BASE_URL}/orders/bulk_delete/`, { ids }, getHeaders());
+    return res.data;
+  },
 };
 
 export default rfqService;

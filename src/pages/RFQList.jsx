@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation, useParams, Link, useNavigate } from 'react-router-dom';
 import rfqService from '../services/rfqService';
 import contactService from '../services/contactService';
-import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch, Mail, RefreshCw } from 'lucide-react';
+import { Search, Eye, Edit3, Trash2, Save, X, Loader2, FileSearch, Mail, RefreshCw, CheckSquare, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
 
@@ -24,6 +25,9 @@ const priorityPills = {
 
 const RFQList = () => {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const { rfqNumber } = useParams();
+  const navigate = useNavigate();
   const [rfqs, setRfqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -77,6 +81,9 @@ const RFQList = () => {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [dispatching, setDispatching] = useState(false);
   const [syncingId, setSyncingId] = useState(null);
+  const [selectedRFQs, setSelectedRFQs] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const handleEditRFQ = async (rfq) => {
     setEditRFQ(rfq);
@@ -85,6 +92,8 @@ const RFQList = () => {
     setEditItems([]);
     setDeletedItemIds([]);
     setSelectedSupplier(null);
+    // Update URL to include RFQ number
+    navigate(`/rfqs/${rfq.rfq_number}`, { replace: true });
     try {
       const detail = await rfqService.getRFQById(rfq.id);
       setEditDetail(detail);
@@ -101,10 +110,65 @@ const RFQList = () => {
     } catch {
       toast.error('Failed to load RFQ details');
       setEditRFQ(null);
+      navigate('/rfqs', { replace: true });
     } finally {
       setEditLoading(false);
     }
   };
+
+  // Check if we need to open a specific RFQ from navigation state
+  useEffect(() => {
+    if (location.state?.openRFQId) {
+      const openRFQ = async () => {
+        try {
+          // Fetch the RFQ detail directly
+          const detail = await rfqService.getRFQById(location.state.openRFQId);
+          
+          // Use handleEditRFQ to open it
+          await handleEditRFQ(detail);
+          
+          // Clear the state to prevent reopening on refresh
+          window.history.replaceState({}, document.title);
+        } catch (err) {
+          console.error('Failed to fetch RFQ:', err);
+          toast.error('Failed to open RFQ');
+        }
+      };
+      
+      openRFQ();
+    }
+  }, [location.state]);
+
+  // Check if we need to open a specific RFQ from URL parameter
+  useEffect(() => {
+    if (rfqNumber) {
+      const openRFQByNumber = async () => {
+        try {
+          // Fetch all RFQs without pagination to find the matching one
+          const params = { page: 1, page_size: 1000 };
+          const data = await rfqService.getRFQs(params);
+          // Case-insensitive comparison for RFQ number
+          const matchingRFQ = data.results?.find(r => 
+            r.rfq_number?.toLowerCase() === rfqNumber.toLowerCase()
+          );
+          
+          if (matchingRFQ) {
+            await handleEditRFQ(matchingRFQ);
+          } else {
+            console.error('RFQ not found. Looking for:', rfqNumber, 'Available RFQs:', data.results?.map(r => r.rfq_number));
+            toast.error('RFQ not found');
+            navigate('/rfqs', { replace: true });
+          }
+        } catch (err) {
+          console.error('Failed to fetch RFQ:', err);
+          toast.error('Failed to open RFQ');
+          navigate('/rfqs', { replace: true });
+        }
+      };
+      
+      openRFQByNumber();
+    }
+  }, [rfqNumber]);
 
   const handleEditChange = (field, value) => {
     setEditDetail(prev => ({ ...prev, [field]: value }));
@@ -177,6 +241,7 @@ const RFQList = () => {
       setEditDetail(null);
       setEditItems([]);
       setDeletedItemIds([]);
+      navigate('/rfqs', { replace: true });
       fetchRFQs();
     } catch {
       toast.error('Failed to update RFQ');
@@ -193,6 +258,7 @@ const RFQList = () => {
       setEditRFQ(null);
       setEditDetail(null);
       setDeleteConfirm(null);
+      navigate('/rfqs', { replace: true });
       fetchRFQs();
     } catch {
       toast.error('Failed to delete RFQ');
@@ -247,6 +313,22 @@ const RFQList = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedRFQs.length === 0) return;
+    setBulkDeleting(true);
+    try {
+      await rfqService.bulkDeleteRFQs(selectedRFQs);
+      toast.success(`${selectedRFQs.length} RFQ(s) deleted successfully`);
+      setSelectedRFQs([]);
+      setBulkDeleteConfirm(false);
+      fetchRFQs();
+    } catch {
+      toast.error('Failed to delete RFQs');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center h-[calc(100vh-100px)] gap-3">
@@ -270,6 +352,19 @@ const RFQList = () => {
       </div>
 
       <div className="border border-border-light dark:border-white/10 rounded-xl p-5 mb-6 bg-white dark:bg-navy shadow-card relative z-10">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex gap-2">
+            {selectedRFQs.length > 0 && (
+              <button
+                onClick={() => setBulkDeleteConfirm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20 transition-all duration-200 text-sm font-medium"
+              >
+                <Trash2 size={16} />
+                Delete Selected ({selectedRFQs.length})
+              </button>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Status</label>
@@ -333,6 +428,20 @@ const RFQList = () => {
           <table className="min-w-full">
             <thead>
               <tr className="border-b border-border-light dark:border-white/10 bg-ivory dark:bg-navy-light">
+                <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedRFQs.length === rfqs.length && rfqs.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedRFQs(rfqs.map(r => r.id));
+                      } else {
+                        setSelectedRFQs([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-gold"
+                  />
+                </th>
                 <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">RFQ Serial</th>
                 <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Client Partner</th>
                 <th scope="col" className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Status</th>
@@ -344,7 +453,7 @@ const RFQList = () => {
             <tbody>
               {rfqs.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-5 py-12 text-center">
+                  <td colSpan="7" className="px-5 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <FileSearch size={32} className="text-slate-300 dark:text-white/30" />
                       <p className="text-sm font-mono text-slate-400 dark:text-white/60">No records match your filter criteria</p>
@@ -360,8 +469,28 @@ const RFQList = () => {
                       rfq.priority === 'urgent' ? 'bg-danger/[0.02]' : ''
                     }`}
                   >
+                    <td className="px-5 py-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedRFQs.includes(rfq.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRFQs([...selectedRFQs, rfq.id]);
+                          } else {
+                            setSelectedRFQs(selectedRFQs.filter(id => id !== rfq.id));
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-gold"
+                      />
+                    </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-700 dark:text-white font-mono">{rfq.rfq_number}</span>
+                      <Link 
+                        to={`/rfqs/${rfq.rfq_number}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-sm font-medium text-gold hover:text-gold-dark font-mono hover:underline"
+                      >
+                        {rfq.rfq_number}
+                      </Link>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
                       <span className="text-sm font-medium text-slate-700 dark:text-white">{rfq.company_name}</span>
@@ -539,15 +668,50 @@ const RFQList = () => {
         </div>
       )}
 
+      {bulkDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white dark:bg-navy rounded-xl shadow-card border border-border-light dark:border-white/10 p-6 max-w-md w-full mx-4 animate-fadeInUp">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
+                <Trash2 size={20} className="text-danger" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-white">Delete RFQs</h3>
+            </div>
+
+            <p className="text-sm text-slate-600 dark:text-white/80 mb-6">
+              Are you sure you want to delete {selectedRFQs.length} RFQ(s)? This action cannot be undone.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setBulkDeleteConfirm(false)}
+                disabled={bulkDeleting}
+                className="px-4 py-2 rounded-lg border border-border-light dark:border-white/20 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-all duration-200 text-sm font-medium disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+                className="px-4 py-2 rounded-lg bg-danger text-white hover:bg-danger/90 transition-all duration-200 text-sm font-medium disabled:opacity-60 flex items-center gap-2"
+              >
+                {bulkDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editRFQ && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => { setEditRFQ(null); setEditDetail(null); }} />
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => { setEditRFQ(null); setEditDetail(null); navigate('/rfqs', { replace: true }); }} />
           <div className="relative w-full max-w-2xl bg-white dark:bg-navy shadow-xl border-l border-border-light dark:border-white/10 animate-slideInRight overflow-y-auto">
             <div className="sticky top-0 bg-white dark:bg-navy border-b border-border-light dark:border-white/10 px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold text-slate-700 dark:text-white font-mono">
                 Edit {editRFQ.rfq_number}
               </h2>
-              <button onClick={() => { setEditRFQ(null); setEditDetail(null); }} className="text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white">
+              <button onClick={() => { setEditRFQ(null); setEditDetail(null); navigate('/rfqs', { replace: true }); }} className="text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white">
                 <X size={20} />
               </button>
             </div>
@@ -681,7 +845,7 @@ const RFQList = () => {
                       <thead>
                         <tr className="border-b border-border-light dark:border-white/10">
                           <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Code</th>
-                          <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Description</th>
+                          <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Name</th>
                           <th className="text-right py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Qty</th>
                           <th className="text-left py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Unit</th>
                           <th className="text-right py-2 pr-2 font-mono text-[9px] uppercase tracking-wider text-slate-400 dark:text-white/60">Unit $</th>
@@ -751,7 +915,7 @@ const RFQList = () => {
                   </button>
                   <div className="flex gap-3">
                     <button
-                      onClick={() => { setEditRFQ(null); setEditDetail(null); }}
+                      onClick={() => { setEditRFQ(null); setEditDetail(null); navigate('/rfqs', { replace: true }); }}
                       className="px-4 py-2.5 rounded-lg border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:text-slate-700 dark:hover:text-white text-sm transition-all duration-200"
                     >
                       Cancel
