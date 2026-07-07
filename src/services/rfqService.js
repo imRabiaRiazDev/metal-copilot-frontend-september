@@ -109,6 +109,11 @@ const rfqService = {
     const res = await api.post(`${API_BASE_URL}/orders/bulk_delete/`, { ids }, getHeaders());
     return res.data;
   },
+
+  getPurchaseOrders: async (params = {}) => {
+    const res = await api.get(`${API_BASE_URL}/orders/purchase_orders/`, { ...getHeaders(), params });
+    return res.data;
+  },
 };
 
 export default rfqService;

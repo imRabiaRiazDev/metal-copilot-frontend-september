@@ -7,6 +7,7 @@ import {
   Users,
   KanbanSquare,
   CheckSquare,
+  ShoppingCart,
   LogOut,
   Moon,
   Sun,
@@ -26,6 +27,7 @@ const menuGroups = [
     label: 'Operations',
     items: [
       { path: '/rfqs', label: 'RFQ List', icon: FileText },
+      { path: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart },
       { path: '/contacts', label: 'Contacts', icon: Users },
       { path: '/deals', label: 'Deals Pipeline', icon: KanbanSquare },
       { path: '/tasks', label: 'Tasks', icon: CheckSquare },
