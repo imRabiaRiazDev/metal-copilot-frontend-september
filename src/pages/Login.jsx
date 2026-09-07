@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../services/authService';
-import { Eye, EyeOff, Loader2, KanbanSquare } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+
+const LogoMark = ({ size = 20 }) => (
+  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-gold to-gold-dark flex items-center justify-center shrink-0 shadow-gold">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 8l8-5 8 5-8 5-8-5z" fill="#0B2048" />
+      <path d="M4 11.5V17l8 5v-5.5l-8-5z" fill="#0B2048" opacity="0.85" />
+      <path d="M20 11.5V17l-8 5v-5.5l8-5z" fill="#0B2048" opacity="0.65" />
+    </svg>
+  </div>
+);
 
 const Login = () => {
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -26,7 +36,7 @@ const Login = () => {
       localStorage.setItem('access_token', response.access);
       localStorage.setItem('refresh_token', response.refresh);
       localStorage.setItem('user', JSON.stringify(response.user));
-      navigate('/home');
+      navigate('/dashboard');
     } catch (err) {
       setError(err.error || err.username || err.password || 'Authentication failed.');
     } finally {
@@ -37,15 +47,18 @@ const Login = () => {
   return (
     <div className="min-h-screen w-full flex relative overflow-hidden bg-ivory dark:bg-navy-dark">
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative z-10 bg-navy dark:bg-navy">
-        <div className="flex items-center gap-3">
-          <KanbanSquare size={20} className="text-gold" />
+        <div className="absolute inset-0 bg-grid opacity-40 pointer-events-none" />
+        <div className="glow glow-gold -top-20 -right-20" />
+
+        <div className="relative flex items-center gap-3">
+          <LogoMark />
           <span className="text-lg font-bold text-white tracking-tight">
             Co.Ri.Metal
             <span className="text-[10px] font-mono ml-2 text-gold font-normal">Copilot</span>
           </span>
         </div>
 
-        <div className="my-auto max-w-xl">
+        <div className="relative my-auto max-w-xl">
           <div className="w-16 h-0.5 bg-gold mb-8" />
           <h2 className="text-5xl font-extrabold tracking-tight text-white leading-tight mb-6">
             Trusted
@@ -59,11 +72,14 @@ const Login = () => {
           </p>
         </div>
 
-        <div className="border border-white/10 rounded-xl p-6 bg-white/5">
+        <div className="relative border border-white/10 rounded-xl p-6 bg-white/5 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-5">
             <span className="text-[10px] font-mono uppercase tracking-widest text-white/40">System Status</span>
             <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald dark:text-emerald">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald" />
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald opacity-60" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald" />
+              </span>
               Online
             </span>
           </div>
@@ -85,14 +101,25 @@ const Login = () => {
       </div>
 
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative z-10">
-        <div className="w-full max-w-md">
+        <div className="glow glow-gold top-10 right-10" />
+        <div className="w-full max-w-md animate-fadeInUp">
+          <div className="flex lg:hidden items-center justify-center gap-3 mb-8">
+            <LogoMark />
+            <span className="text-lg font-bold text-slate-700 dark:text-white tracking-tight">
+              Co.Ri.Metal
+            </span>
+          </div>
+
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-slate-700 dark:text-white mb-1">Sign In</h1>
-            <p className="text-sm text-slate-400 dark:text-white/60">Enter your credentials</p>
+            <p className="text-sm text-slate-400 dark:text-white/60">Enter your credentials to access the terminal</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-3 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm text-center">
+            <div
+              role="alert"
+              className="mb-6 p-3 rounded-lg bg-danger/10 border border-danger/30 text-danger text-sm text-center animate-fadeInUp"
+            >
               {error}
             </div>
           )}
@@ -108,8 +135,9 @@ const Login = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/30 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/30 transition-all duration-200"
+                className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/30 text-sm focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/30"
                 placeholder="john@example.com"
+                autoComplete="username"
                 required
                 disabled={loading}
               />
@@ -126,14 +154,16 @@ const Login = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/30 text-sm pr-12 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/30 transition-all duration-200"
+                  className="w-full px-4 py-2.5 rounded-lg bg-white dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white placeholder:text-slate-300 dark:placeholder:text-white/30 text-sm pr-12 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/30"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   required
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/60 hover:text-slate-600 dark:hover:text-white transition-colors duration-200"
                   tabIndex={-1}
                 >
@@ -145,7 +175,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 bg-gold text-white font-semibold rounded-lg text-sm hover:bg-gold-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-gold text-navy font-semibold rounded-lg text-sm hover:bg-gold-dark hover:shadow-gold disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

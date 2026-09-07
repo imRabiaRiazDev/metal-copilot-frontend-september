@@ -15,7 +15,7 @@ const Skeleton = ({ rows = 4, className = '' }) => (
 );
 
 export const TableSkeleton = ({ rows = 5, cols = 6 }) => (
-  <div className="border border-border-light dark:border-white/10 rounded-xl overflow-hidden bg-white dark:bg-navy">
+  <div className="border border-border-light dark:border-white/10 rounded-xl overflow-hidden bg-white dark:bg-navy shadow-card">
     <div className="px-5 py-3.5 border-b border-border-light dark:border-white/10 bg-ivory dark:bg-navy-light">
       <div className="flex gap-6">
         {Array.from({ length: cols }).map((_, i) => (
@@ -24,7 +24,7 @@ export const TableSkeleton = ({ rows = 5, cols = 6 }) => (
       </div>
     </div>
     {Array.from({ length: rows }).map((_, r) => (
-      <div key={r} className="px-5 py-4 border-b border-border-light dark:border-white/5">
+      <div key={r} className="px-5 py-4 border-b border-border-light dark:border-white/5 last:border-0">
         <div className="flex gap-6">
           {Array.from({ length: cols }).map((_, c) => (
             <div key={c} className={`h-3 rounded skeleton-shimmer ${c === 0 ? 'w-1/4' : 'flex-1'}`} />

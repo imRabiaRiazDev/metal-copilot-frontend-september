@@ -26,10 +26,11 @@ const Pagination = ({ page, totalPages, total, onPageChange, pageSize, onPageSiz
     pages.push(totalPages);
   }
 
-  const btnBase = 'inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-mono font-medium transition-all duration-200';
+  const btnBase =
+    'inline-flex items-center justify-center w-8 h-8 rounded-lg text-xs font-mono font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60';
 
   return (
-    <div className="flex items-center justify-between pt-4 pb-1 px-1">
+    <div className="flex flex-wrap items-center justify-between gap-3 pt-4 pb-1 px-1">
       <div className="flex items-center gap-4">
         <span className="text-[10px] font-mono text-slate-400 dark:text-white/60">
           {startItem}–{endItem} of {total}
@@ -41,7 +42,7 @@ const Pagination = ({ page, totalPages, total, onPageChange, pageSize, onPageSiz
             <select
               value={pageSize}
               onChange={(e) => { onPageSizeChange(Number(e.target.value)); }}
-              className="px-2 py-1 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-[10px] font-mono focus:outline-none focus:border-gold cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-[10px] font-mono focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/25 cursor-pointer"
             >
               {PAGE_SIZES.map((s) => (
                 <option key={s} value={s}>{s}</option>
@@ -55,6 +56,7 @@ const Pagination = ({ page, totalPages, total, onPageChange, pageSize, onPageSiz
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
+          aria-label="Previous page"
           className={`${btnBase} border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:border-gold hover:text-gold disabled:opacity-30 disabled:pointer-events-none`}
         >
           <ChevronLeft size={14} />
@@ -69,9 +71,10 @@ const Pagination = ({ page, totalPages, total, onPageChange, pageSize, onPageSiz
             <button
               key={p}
               onClick={() => onPageChange(p)}
+              aria-current={p === page ? 'page' : undefined}
               className={`${btnBase} ${
                 p === page
-                  ? 'bg-gold text-white shadow-gold'
+                  ? 'bg-gold text-navy shadow-gold'
                   : 'border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:border-gold hover:text-gold'
               }`}
             >
@@ -83,6 +86,7 @@ const Pagination = ({ page, totalPages, total, onPageChange, pageSize, onPageSiz
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
+          aria-label="Next page"
           className={`${btnBase} border border-border-light dark:border-white/20 text-slate-400 dark:text-white/60 hover:border-gold hover:text-gold disabled:opacity-30 disabled:pointer-events-none`}
         >
           <ChevronRight size={14} />

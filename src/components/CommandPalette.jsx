@@ -48,7 +48,7 @@ const CommandPalette = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 scrim backdrop-blur-sm animate-fadeIn" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white dark:bg-navy rounded-xl shadow-2xl border border-border-light dark:border-white/10 overflow-hidden animate-fadeInUp">
         <Command className="w-full">
           <div className="flex items-center border-b border-border-light dark:border-white/10 px-4">

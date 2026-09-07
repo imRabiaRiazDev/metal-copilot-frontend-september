@@ -50,6 +50,11 @@ const rfqService = {
     return res.data;
   },
 
+  getAiUsage: async (params = {}) => {
+    const res = await api.get(`${API_BASE_URL}/orders/ai_usage/`, { ...getHeaders(), params });
+    return res.data;
+  },
+
   getRFQItems: async (orderId) => {
     const res = await api.get(`${API_BASE_URL}/items/?order_id=${orderId}`, getHeaders());
     return res.data;
@@ -67,41 +72,6 @@ const rfqService = {
 
   deleteRFQItem: async (id) => {
     const res = await api.delete(`${API_BASE_URL}/items/${id}/`, getHeaders());
-    return res.data;
-  },
-
-  getRFQAttachments: async (orderId) => {
-    const res = await api.get(`${API_BASE_URL}/attachments/?order_id=${orderId}`, getHeaders());
-    return res.data;
-  },
-
-  getAvailableSuppliers: async () => {
-    const res = await api.get(`${API_BASE_URL}/orders/available_suppliers/`, getHeaders());
-    return res.data;
-  },
-
-  assignSupplier: async (orderId, supplierId, autoDispatch = false) => {
-    const res = await api.post(`${API_BASE_URL}/orders/${orderId}/assign_supplier/`, {
-      supplier_id: supplierId,
-      auto_dispatch: autoDispatch,
-    }, getHeaders());
-    return res.data;
-  },
-
-  dispatchToSupplier: async (orderId, supplierId) => {
-    const res = await api.post(`${API_BASE_URL}/orders/${orderId}/dispatch_to_supplier/`, {
-      supplier_id: supplierId,
-    }, getHeaders());
-    return res.data;
-  },
-
-  getOrderSuppliers: async (orderId) => {
-    const res = await api.get(`${API_BASE_URL}/orders/${orderId}/suppliers/`, getHeaders());
-    return res.data;
-  },
-
-  syncToBusinessCentral: async (orderId) => {
-    const res = await api.post(`${API_BASE_URL}/monitor/bc/${orderId}/`, {}, getHeaders());
     return res.data;
   },
 

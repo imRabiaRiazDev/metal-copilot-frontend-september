@@ -2,13 +2,13 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
-import Home from './pages/Home';
 import RFQList from './pages/RFQList';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Dashboard from './pages/Dashboard';
 import Contacts from './pages/Contacts';
 import Deals from './pages/Deals';
 import Tasks from './pages/Tasks';
+import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -21,14 +21,14 @@ function App() {
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route path="/home" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/rfqs" element={<RFQList />} />
             <Route path="/rfqs/:rfqNumber" element={<RFQList />} />
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
-            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/deals" element={<Deals />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />

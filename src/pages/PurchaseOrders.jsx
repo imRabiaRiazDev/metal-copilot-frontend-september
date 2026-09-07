@@ -1,32 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import rfqService from '../services/rfqService';
-import { Search, Eye, RefreshCw, Loader2, Trash2, X } from 'lucide-react';
+import { Search, Eye, RefreshCw, Loader2, Trash2, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
-
-const statusPills = {
-  pending: 'bg-amber/10 text-amber border-amber/20',
-  processing: 'bg-gold/10 text-gold border-gold/20',
-  completed: 'bg-emerald/10 text-emerald border-emerald/20',
-  rejected: 'bg-danger/10 text-danger border-danger/20',
-  fulfilled: 'bg-emerald/10 text-emerald border-emerald/20',
-  cancelled: 'bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-white/60 border-slate-300 dark:border-white/20',
-};
-
-const priorityPills = {
-  low: 'bg-slate-100 dark:bg-white/10 text-slate-400 dark:text-white/60 border-slate-300 dark:border-white/20',
-  medium: 'bg-gold/10 text-gold border-gold/20',
-  high: 'bg-amber/10 text-amber border-amber/20',
-  urgent: 'bg-danger/10 text-danger border-danger/20',
-};
+import PageHeader from '../components/PageHeader';
 
 const PurchaseOrders = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({ status: '', priority: '', search: '' });
+  const [filters, setFilters] = useState({ search: '' });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -43,8 +28,6 @@ const PurchaseOrders = () => {
     try {
       setLoading(true);
       const params = {};
-      if (filters.status) params.status = filters.status;
-      if (filters.priority) params.priority = filters.priority;
       if (filters.search) params.search = filters.search;
       params.page = page;
       params.page_size = pageSize;
@@ -92,62 +75,56 @@ const PurchaseOrders = () => {
     }
   };
 
-  return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Purchase Orders</h1>
-        <p className="text-slate-600 dark:text-white/60">Customer purchase orders</p>
-      </div>
+  const toggleAll = () => {
+    if (selectedOrders.length === orders.length && orders.length > 0) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map((o) => o.id));
+    }
+  };
 
-      <div className="bg-white dark:bg-navy border border-border-light dark:border-white/10 rounded-xl p-4 mb-6 shadow-sm">
-        <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
+  const toggleOne = (id) => {
+    setSelectedOrders((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <div className="min-h-0 w-full max-w-full overflow-x-hidden animate-fadeInUp">
+      <PageHeader
+        icon={ShoppingCart}
+        title="Purchase"
+        accent="Orders"
+        subtitle="Review and manage confirmed customer purchase orders."
+      />
+
+      <div className="card p-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[240px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/60" size={16} />
               <input
                 type="text"
                 placeholder="Search orders..."
                 value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="w-full bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 rounded-lg pl-10 pr-4 py-2 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-white/40 focus:outline-none focus:border-gold transition-colors"
+                onChange={(e) => { setFilters({ ...filters, search: e.target.value }); setPage(1); }}
+                className="w-full bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 rounded-lg pl-10 pr-4 py-2 text-slate-700 dark:text-white text-sm placeholder:text-slate-300 dark:placeholder:text-white/30 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/25"
               />
             </div>
           </div>
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 rounded-lg px-4 py-2 text-slate-700 dark:text-white focus:outline-none focus:border-gold transition-colors"
-          >
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="processing">Processing</option>
-            <option value="completed">Completed</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <select
-            value={filters.priority}
-            onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
-            className="bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 rounded-lg px-4 py-2 text-slate-700 dark:text-white focus:outline-none focus:border-gold transition-colors"
-          >
-            <option value="">All Priority</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
           <button
             onClick={fetchPurchaseOrders}
-            className="flex items-center gap-2 bg-gold/10 hover:bg-gold/20 text-gold border border-gold/20 rounded-lg px-4 py-2 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border-light dark:border-white/20 text-slate-700 dark:text-white/80 hover:border-gold hover:text-gold text-sm font-medium transition-all duration-200"
           >
-            <RefreshCw size={18} />
+            <RefreshCw size={16} />
             Refresh
           </button>
           {selectedOrders.length > 0 && (
             <button
               onClick={() => setBulkDeleteConfirm(true)}
-              className="flex items-center gap-2 bg-danger/10 hover:bg-danger/20 text-danger border border-danger/20 rounded-lg px-4 py-2 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20 text-sm font-medium transition-all duration-200"
             >
-              <Trash2 size={18} />
+              <Trash2 size={16} />
               Delete ({selectedOrders.length})
             </button>
           )}
@@ -155,96 +132,87 @@ const PurchaseOrders = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="animate-spin text-gold" size={32} />
+        <div className="flex flex-col justify-center items-center h-[calc(100vh-260px)] gap-3">
+          <Loader2 size={32} className="animate-spin text-gold" />
+          <span className="font-mono text-[10px] uppercase tracking-widest text-slate-400 dark:text-white/60">
+            Loading orders...
+          </span>
         </div>
       ) : error ? (
-        <div className="bg-danger/10 border border-danger/20 rounded-lg p-4 text-danger">
+        <div className="px-4 py-3 rounded-lg text-sm border border-danger/30 bg-danger/10 text-danger">
           {error}
         </div>
       ) : orders.length === 0 ? (
-        <div className="bg-white dark:bg-navy border border-border-light dark:border-white/10 rounded-xl p-12 text-center">
-          <p className="text-slate-600 dark:text-white/60">No purchase orders found</p>
+        <div className="card p-12 text-center">
+          <ShoppingCart size={32} className="mx-auto mb-3 text-slate-300 dark:text-white/30" />
+          <p className="text-sm font-mono text-slate-400 dark:text-white/60">No purchase orders found</p>
         </div>
       ) : (
-        <>
-          <div className="bg-white dark:bg-navy border border-border-light dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
-            <table className="w-full">
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
               <thead>
-                <tr className="border-b border-border-light dark:border-white/10">
-                  <th className="p-4 w-10">
+                <tr className="border-b border-border-light dark:border-white/10 bg-ivory dark:bg-navy-light">
+                  <th className="px-5 py-3.5 w-10">
                     <input
                       type="checkbox"
                       checked={selectedOrders.length === orders.length && orders.length > 0}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedOrders(orders.map(o => o.id));
-                        } else {
-                          setSelectedOrders([]);
-                        }
-                      }}
-                      className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-gold"
+                      onChange={toggleAll}
+                      className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-2 focus:ring-gold/40"
                     />
                   </th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">RFQ Number</th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">Company</th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">PO Number</th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">Status</th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">Priority</th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">Stage</th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">Date</th>
-                  <th className="text-left p-4 text-slate-600 dark:text-white/60 font-medium">Actions</th>
+                  <th className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">RFQ Number</th>
+                  <th className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Company</th>
+                  <th className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">PO Number</th>
+                  <th className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Stage</th>
+                  <th className="px-5 py-3.5 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Date</th>
+                  <th className="px-5 py-3.5 text-right text-[9px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/60 font-mono">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((order) => (
-                  <tr key={order.id} className="border-b border-border-light dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5">
-                    <td className="p-4">
+                  <tr
+                    key={order.id}
+                    className={`border-b border-border-light dark:border-white/5 last:border-0 transition-all duration-150 hover:bg-gold/[0.02] ${selectedOrders.includes(order.id) ? 'selected-row' : ''}`}
+                  >
+                    <td className="px-5 py-3.5 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedOrders.includes(order.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedOrders([...selectedOrders, order.id]);
-                          } else {
-                            setSelectedOrders(selectedOrders.filter(id => id !== order.id));
-                          }
-                        }}
-                        className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-gold"
+                        onChange={() => toggleOne(order.id)}
+                        className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-2 focus:ring-gold/40"
                       />
                     </td>
-                    <td className="p-4">
-                      <span className="text-gold font-medium">{order.rfq_number}</span>
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <span className="text-sm font-medium text-gold font-mono">{order.rfq_number}</span>
                     </td>
-                    <td className="p-4 text-slate-700 dark:text-white">{order.company_name || '-'}</td>
-                    <td className="p-4 text-slate-700 dark:text-white">{order.po_number || '-'}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${statusPills[order.status] || statusPills.pending}`}>
-                        {order.status}
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <span className="text-sm font-medium text-slate-700 dark:text-white">{order.company_name || '-'}</span>
+                    </td>
+                    <td className="px-5 py-3.5 whitespace-nowrap text-sm font-mono text-slate-700 dark:text-white">{order.po_number || '-'}</td>
+                    <td className="px-5 py-3.5 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-mono font-semibold uppercase tracking-wider border bg-gold/10 text-gold border-gold/20 capitalize">
+                        {order.stage}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${priorityPills[order.priority] || priorityPills.medium}`}>
-                        {order.priority}
-                      </span>
+                    <td className="px-5 py-3.5 whitespace-nowrap text-sm font-mono text-slate-400 dark:text-white/60">
+                      {order.email_received_at ? new Date(order.email_received_at).toLocaleDateString('en-GB') : '-'}
                     </td>
-                    <td className="p-4 text-slate-700 dark:text-white capitalize">{order.stage}</td>
-                    <td className="p-4 text-slate-600 dark:text-white/60">
-                      {order.email_received_at ? new Date(order.email_received_at).toLocaleDateString() : '-'}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-5 py-3.5 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-3">
                         <button
                           onClick={() => handleView(order)}
-                          className="flex items-center gap-2 text-gold hover:text-gold/80 transition-colors"
+                          aria-label="View order"
+                          className="text-slate-400 dark:text-white/60 hover:text-gold transition-colors duration-200"
                         >
-                          <Eye size={18} />
+                          <Eye size={16} />
                         </button>
                         <button
                           onClick={() => setDeleteConfirm(order)}
-                          className="flex items-center gap-2 text-danger hover:text-danger/80 transition-colors"
+                          aria-label="Delete order"
+                          className="text-slate-400 dark:text-white/60 hover:text-danger transition-colors duration-200"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -253,20 +221,21 @@ const PurchaseOrders = () => {
               </tbody>
             </table>
           </div>
-
           <Pagination
             page={page}
+            totalPages={total > 0 ? Math.ceil(total / pageSize) : 1}
             pageSize={pageSize}
             total={total}
             onPageChange={setPage}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
           />
-        </>
+        </div>
       )}
 
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white dark:bg-navy rounded-xl shadow-card border border-border-light dark:border-white/10 p-6 max-w-md w-full mx-4 animate-fadeInUp">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 scrim backdrop-blur-sm animate-fadeIn" onClick={() => setDeleteConfirm(null)} />
+          <div className="relative bg-white dark:bg-navy rounded-xl shadow-elevated border border-border-light dark:border-white/10 p-6 max-w-md w-full mx-4 animate-scaleIn">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
                 <Trash2 size={20} className="text-danger" />
@@ -274,14 +243,15 @@ const PurchaseOrders = () => {
               <h3 className="text-lg font-semibold text-slate-700 dark:text-white">Delete Purchase Order</h3>
             </div>
 
-            <p className="text-sm text-slate-600 dark:text-white/80 mb-6">
-              Are you sure you want to delete purchase order {deleteConfirm.rfq_number}? This action cannot be undone.
+            <p className="text-sm text-slate-600 dark:text-white/80 mb-6 leading-relaxed">
+              Are you sure you want to delete purchase order{' '}
+              <span className="font-semibold text-slate-700 dark:text-white font-mono">{deleteConfirm.rfq_number}</span>? This action cannot be undone.
             </p>
 
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded-lg border border-border-light dark:border-white/20 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-all duration-200 text-sm font-medium"
+                className="px-4 py-2 rounded-lg border border-border-light dark:border-white/20 text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/5 transition-all duration-200 text-sm font-medium"
               >
                 Cancel
               </button>
@@ -298,8 +268,9 @@ const PurchaseOrders = () => {
       )}
 
       {bulkDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-          <div className="bg-white dark:bg-navy rounded-xl shadow-card border border-border-light dark:border-white/10 p-6 max-w-md w-full mx-4 animate-fadeInUp">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 scrim backdrop-blur-sm animate-fadeIn" onClick={() => setBulkDeleteConfirm(false)} />
+          <div className="relative bg-white dark:bg-navy rounded-xl shadow-elevated border border-border-light dark:border-white/10 p-6 max-w-md w-full mx-4 animate-scaleIn">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
                 <Trash2 size={20} className="text-danger" />
@@ -307,7 +278,7 @@ const PurchaseOrders = () => {
               <h3 className="text-lg font-semibold text-slate-700 dark:text-white">Delete Purchase Orders</h3>
             </div>
 
-            <p className="text-sm text-slate-600 dark:text-white/80 mb-6">
+            <p className="text-sm text-slate-600 dark:text-white/80 mb-6 leading-relaxed">
               Are you sure you want to delete {selectedOrders.length} purchase order(s)? This action cannot be undone.
             </p>
 
@@ -315,7 +286,7 @@ const PurchaseOrders = () => {
               <button
                 onClick={() => setBulkDeleteConfirm(false)}
                 disabled={bulkDeleting}
-                className="px-4 py-2 rounded-lg border border-border-light dark:border-white/20 text-slate-700 dark:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-all duration-200 text-sm font-medium disabled:opacity-60"
+                className="px-4 py-2 rounded-lg border border-border-light dark:border-white/20 text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/5 transition-all duration-200 text-sm font-medium disabled:opacity-60"
               >
                 Cancel
               </button>

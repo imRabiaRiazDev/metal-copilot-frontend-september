@@ -15,6 +15,7 @@ import {
 import taskService from '../../services/taskService';
 import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
+import PageHeader from '../../components/PageHeader';
 import toast from 'react-hot-toast';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 
@@ -68,7 +69,7 @@ const TaskCard = ({ task, onToggle, onDelete, onClick, onRFQClick }) => {
   return (
     <div
       onClick={handleCardClick}
-      className={`group bg-white dark:bg-navy rounded-lg p-4 mb-3 border border-border-light dark:border-white/10 border-l-4 ${columnColor} shadow-sm transition-all duration-200 hover:shadow-gold card-hover cursor-pointer ${rfqNumber ? 'hover:border-gold' : ''}`}
+      className={`group bg-white dark:bg-navy rounded-xl p-4 mb-3 border border-border-light dark:border-white/10 border-l-4 ${columnColor} shadow-card transition-all duration-200 hover:shadow-gold card-hover cursor-pointer ${rfqNumber ? 'hover:border-gold' : ''}`}
     >
       <div className="flex items-start gap-3">
         <button
@@ -105,7 +106,7 @@ const TaskCard = ({ task, onToggle, onDelete, onClick, onRFQClick }) => {
             {task.due_date && (
               <span className={`flex items-center gap-1 ${isOverdue ? 'text-amber font-semibold' : ''}`}>
                 <Calendar size={11} />
-                {format(parseISO(task.due_date), 'MMM d, yyyy')}
+                {format(parseISO(task.due_date), 'dd/MM/yyyy')}
                 {isOverdue && <AlertCircle size={11} />}
               </span>
             )}
@@ -239,15 +240,11 @@ const Tasks = () => {
 
   return (
     <div className="min-h-0 w-full animate-fadeInUp">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-700 dark:text-white mb-1">
-            <CheckSquare size={28} className="inline mr-2 text-gold" strokeWidth={1.5} />
-            Tasks & Reminders
-          </h1>
-          <p className="text-sm text-slate-400 dark:text-white/60">Stay on top of your workflow</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={CheckSquare}
+        title="Tasks & Reminders"
+        subtitle="Stay on top of your workflow"
+      />
 
       {tasks.length === 0 && !showAddForm ? (
         <EmptyState
@@ -258,7 +255,7 @@ const Tasks = () => {
           actionLabel="Add Task"
         />
       ) : (
-        <div className="max-w-[calc(100vw-320px)] overflow-x-auto">
+        <div className="w-full max-w-full overflow-x-auto">
           <div className="flex gap-4 pb-4" style={{ minHeight: 'calc(100vh - 200px)', width: '1500px' }}>
           {columns.map((col) => {
             const items = columnTasks[col.key] || [];
@@ -311,7 +308,7 @@ const Tasks = () => {
                         <button
                           type="submit"
                           disabled={!newTaskTitle.trim()}
-                          className="flex-1 py-1.5 bg-gold text-white rounded text-xs font-medium hover:bg-gold-dark disabled:opacity-50 transition-all"
+                          className="flex-1 py-1.5 bg-gold text-navy rounded text-xs font-medium hover:bg-gold-dark disabled:opacity-50 transition-all"
                         >
                           Add
                         </button>
@@ -335,9 +332,9 @@ const Tasks = () => {
 
       {selectedTask && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setSelectedTask(null)} />
+          <div className="absolute inset-0 scrim backdrop-blur-sm animate-fadeIn" onClick={() => setSelectedTask(null)} />
           <div className="relative w-full max-w-md bg-white dark:bg-navy shadow-xl border-l border-border-light dark:border-white/10 animate-slideInRight overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-navy border-b border-border-light dark:border-white/10 px-6 py-4 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white/90 dark:bg-navy/90 backdrop-blur-md border-b border-border-light dark:border-white/10 px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold text-slate-700 dark:text-white font-mono">
                 Task Details
               </h2>
@@ -383,7 +380,7 @@ const Tasks = () => {
                 <div>
                   <label className="block text-[10px] font-semibold uppercase tracking-wider mb-1.5 text-slate-400 dark:text-white/60 font-mono">Due Date</label>
                   <p className="text-sm text-slate-700 dark:text-white font-mono">
-                    {format(parseISO(selectedTask.due_date), 'MMM d, yyyy')}
+                    {format(parseISO(selectedTask.due_date), 'dd/MM/yyyy')}
                   </p>
                 </div>
               )}

@@ -37,6 +37,11 @@ const contactService = {
     return res.data;
   },
 
+  syncToBusinessCentral: async (id) => {
+    const res = await api.post(`${API_BASE}${id}/sync_bc/`, {}, getHeaders());
+    return res.data;
+  },
+
   bulkDelete: async (ids) => {
     const res = await api.post(`${API_BASE}/bulk-delete/`, { ids }, getHeaders());
     return res.data;

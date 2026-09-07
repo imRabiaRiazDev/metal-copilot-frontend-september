@@ -21,14 +21,29 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <App />
       <Toaster
         position="top-right"
+        gutter={12}
         toastOptions={{
           duration: 4000,
           style: {
-            fontFamily: 'Outfit, Inter, system-ui, sans-serif',
-            borderLeft: '4px solid #C6A95E',
-            borderRadius: '8px',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-heading)',
+            border: '1px solid var(--border-light)',
+            borderLeft: '4px solid var(--gold)',
+            borderRadius: '12px',
             padding: '12px 16px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+            boxShadow: 'var(--shadow-elevated)',
+            fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
+            fontSize: '14px',
+            fontWeight: 500,
+            maxWidth: '420px',
+          },
+          success: {
+            iconTheme: { primary: 'var(--emerald)', secondary: '#FFFFFF' },
+            style: { borderLeftColor: 'var(--emerald)' },
+          },
+          error: {
+            iconTheme: { primary: 'var(--danger)', secondary: '#FFFFFF' },
+            style: { borderLeftColor: 'var(--danger)' },
           },
         }}
       />

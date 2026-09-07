@@ -2,6 +2,10 @@ import { getToken } from './authService';
 import createApiClient from './httpClient';
 
 const API_BASE = '/api/rfq/deals';
+const API_THREADS = '/api/rfq/email-threads';
+const API_PULL = '/api/rfq/monitor/emails/pull/';
+const API_TASK = '/api/rfq/monitor/task';
+const API_ATTACHMENTS = '/api/rfq/deals';
 
 const api = createApiClient();
 
@@ -21,8 +25,26 @@ const dealService = {
   },
 
   createDeal: async (data) => {
-    const res = await api.post(API_BASE, data, getHeaders());
-    return res.data;
+    const files = data.attachments || [];
+    const dealData = { ...data };
+    delete dealData.attachments;
+
+    const res = await api.post(API_BASE, dealData, getHeaders());
+    const deal = res.data;
+
+    if (files.length > 0) {
+      const formData = new FormData();
+      files.forEach((file) => formData.append('files', file));
+      await api.post(`${API_ATTACHMENTS}/${deal.id}/attachments/`, formData, {
+        ...getHeaders(),
+        headers: {
+          ...getHeaders().headers,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    }
+
+    return deal;
   },
 
   updateDeal: async (id, data) => {
@@ -32,6 +54,31 @@ const dealService = {
 
   deleteDeal: async (id) => {
     const res = await api.delete(`${API_BASE}/${id}/`, getHeaders());
+    return res.data;
+  },
+
+  pullEmails: async (start_time, end_time) => {
+    const res = await api.post(API_PULL, { start_time, end_time }, getHeaders());
+    return res.data;
+  },
+
+  getTaskStatus: async (taskId) => {
+    const res = await api.get(`${API_TASK}/${taskId}/`, getHeaders());
+    return res.data;
+  },
+
+  getEmailThreads: async (params = {}) => {
+    const res = await api.get(API_THREADS, { ...getHeaders(), params });
+    return res.data;
+  },
+
+  categorizeThread: async (threadId) => {
+    const res = await api.post(`${API_THREADS}/${threadId}/categorize/`, {}, getHeaders());
+    return res.data;
+  },
+
+  updateThread: async (threadId, data) => {
+    const res = await api.patch(`${API_THREADS}/${threadId}/`, data, getHeaders());
     return res.data;
   },
 };

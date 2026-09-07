@@ -10,14 +10,15 @@ import {
   Pencil,
   Trash2,
   Loader2,
-  MoreHorizontal,
   Mail,
+  UploadCloud,
 } from 'lucide-react';
 import contactService from '../../services/contactService';
 import EmptyState from '../../components/EmptyState';
 import Skeleton from '../../components/Skeleton';
 import ContextMenu from '../../components/ContextMenu';
 import Pagination from '../../components/Pagination';
+import PageHeader from '../../components/PageHeader';
 import toast from 'react-hot-toast';
 
 const typeStyles = {
@@ -52,7 +53,7 @@ const InlineEdit = ({ value, onSave, onCancel }) => {
       onChange={(e) => setEditValue(e.target.value)}
       onKeyDown={handleKeyDown}
       onBlur={() => onSave(editValue)}
-      className="w-full px-2 py-1 text-sm border border-gold rounded bg-white dark:bg-navy-light text-slate-700 dark:text-white outline-none"
+      className="w-full px-2 py-1 text-sm border border-gold rounded bg-white dark:bg-navy-light text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-gold/30"
     />
   );
 };
@@ -82,9 +83,9 @@ const ContactDrawer = ({ contact, onClose, onSave, onDelete }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 scrim backdrop-blur-sm animate-fadeIn" onClick={onClose} />
       <div className="relative w-full max-w-lg bg-white dark:bg-navy shadow-xl border-l border-border-light dark:border-white/10 animate-slideInRight overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-navy border-b border-border-light dark:border-white/10 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white/90 dark:bg-navy/90 backdrop-blur-md border-b border-border-light dark:border-white/10 px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-700 dark:text-white">
             {isNew ? 'Add Contact' : 'Edit Contact'}
           </h2>
@@ -152,7 +153,7 @@ const ContactDrawer = ({ contact, onClose, onSave, onDelete }) => {
                 Cancel
               </button>
               <button type="submit"
-                className="py-2.5 px-4 bg-gold text-white font-semibold rounded-lg text-sm hover:bg-gold-dark transition-all duration-200">
+                className="py-2.5 px-4 bg-gold text-navy font-semibold rounded-lg text-sm hover:bg-gold-dark hover:shadow-gold active:scale-[0.98] transition-all duration-200">
                 {isNew ? 'Create Contact' : 'Save Changes'}
               </button>
             </div>
@@ -172,6 +173,7 @@ const Contacts = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [syncingId, setSyncingId] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const searchTimer = useRef(null);
@@ -267,6 +269,23 @@ const Contacts = () => {
     setSelected([]);
   };
 
+  const handleSyncToBc = async (contact, e) => {
+    e.stopPropagation();
+    setSyncingId(contact.id);
+    try {
+      const response = await contactService.syncToBusinessCentral(contact.id);
+      toast.success(
+        response.already_synced
+          ? 'Customer already synced to Business Central'
+          : 'Customer synced to Business Central'
+      );
+    } catch {
+      toast.error('Failed to sync customer to Business Central');
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
   const columns = [
     { key: 'company_name', label: 'Company', width: 'w-1/5' },
     { key: 'contact_person', label: 'Contact Person', width: 'w-1/6' },
@@ -278,49 +297,51 @@ const Contacts = () => {
 
   return (
     <div className="min-h-screen animate-fadeInUp">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-700 dark:text-white mb-1">
-            <Users size={28} className="inline mr-2 text-gold" strokeWidth={1.5} />
-            Contacts
-          </h1>
-          <p className="text-sm text-slate-400 dark:text-white/60">Manage suppliers and clients</p>
-        </div>
-        <button
-          onClick={() => { setEditingContact(null); setDrawerOpen(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gold text-white rounded-lg text-sm font-semibold hover:bg-gold-dark transition-all duration-200 shadow-gold"
-        >
-          <Plus size={18} />
-          Add Contact
-        </button>
-      </div>
+      <PageHeader
+        icon={Users}
+        title="Contacts"
+        subtitle="Manage suppliers and clients"
+        actions={
+          <button
+            onClick={() => { setEditingContact(null); setDrawerOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gold text-navy rounded-lg text-sm font-semibold hover:bg-gold-dark hover:shadow-gold active:scale-[0.98] transition-all duration-200 shadow-gold"
+          >
+            <Plus size={18} />
+            Add Contact
+          </button>
+        }
+      />
 
-      <div className="flex items-center gap-4 mb-6">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.key
-                  ? 'bg-gold text-white shadow-gold'
-                  : 'bg-white dark:bg-navy text-slate-400 dark:text-white/60 border border-border-light dark:border-white/10 hover:border-gold'
-              }`}
-            >
-              <Icon size={16} strokeWidth={1.5} />
-              {tab.label}
-            </button>
-          );
-        })}
-        <div className="relative ml-auto">
+      <div className="card p-4 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 ${
+                  activeTab === tab.key
+                    ? 'bg-gold text-navy shadow-gold'
+                    : 'text-slate-400 dark:text-white/60 hover:bg-ivory dark:hover:bg-navy-light hover:text-slate-700 dark:hover:text-white'
+                }`}
+              >
+                <Icon size={16} strokeWidth={1.5} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="relative ml-auto w-full sm:w-64">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/60" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search contacts..."
-            className="w-64 pl-9 pr-3 py-2 rounded-lg bg-white dark:bg-navy border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm placeholder:text-slate-300 dark:placeholder:text-white/30 focus:outline-none focus:border-gold transition-all"
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-ivory dark:bg-navy-light border border-border-light dark:border-white/20 text-slate-700 dark:text-white text-sm placeholder:text-slate-300 dark:placeholder:text-white/30 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/25 transition-all"
           />
+        </div>
         </div>
       </div>
 
@@ -344,7 +365,7 @@ const Contacts = () => {
           actionLabel="Add Contact"
         />
       ) : (
-        <div className="bg-white dark:bg-navy border border-border-light dark:border-white/10 rounded-xl overflow-hidden shadow-card">
+        <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
@@ -354,7 +375,7 @@ const Contacts = () => {
                       type="checkbox"
                       checked={selected.length === contacts.length && contacts.length > 0}
                       onChange={toggleSelectAll}
-                      className="rounded border-border-light dark:border-white/20 text-gold focus:ring-gold"
+                      className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-2 focus:ring-gold/40"
                     />
                   </th>
                   {columns.map((col) => (
@@ -362,7 +383,7 @@ const Contacts = () => {
                       {col.label}
                     </th>
                   ))}
-                  <th className="px-4 py-3.5 w-16" />
+                  <th className="px-4 py-3.5 w-40" />
                 </tr>
               </thead>
               <tbody>
@@ -380,7 +401,7 @@ const Contacts = () => {
                         type="checkbox"
                         checked={selected.includes(contact.id)}
                         onChange={() => toggleSelect(contact.id)}
-                        className="rounded border-border-light dark:border-white/20 text-gold focus:ring-gold"
+                        className="w-4 h-4 rounded border-border-light dark:border-white/20 text-gold focus:ring-2 focus:ring-gold/40"
                       />
                     </td>
                     {columns.map((col) => (
@@ -408,23 +429,31 @@ const Contacts = () => {
                           </div>
                         ) : (
                           <div
-                            className="flex items-center gap-2 cursor-pointer group"
+                            className="cursor-pointer"
                             onDoubleClick={() => setEditingCell({ id: contact.id, field: col.key })}
                           >
                             <span className="text-sm text-slate-700 dark:text-white">
                               {contact[col.key] || '-'}
                             </span>
-                            <Pencil size={12} className="text-slate-300 dark:text-white/20 group-hover:text-gold opacity-0 group-hover:opacity-100 transition-all" />
                           </div>
                         )}
                       </td>
                     ))}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => openEdit(contact)}
-                        className="text-slate-400 dark:text-white/60 hover:text-gold transition-all"
+                        onClick={(e) => handleSyncToBc(contact, e)}
+                        disabled={syncingId === contact.id}
+                        title="Sync to BC"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-md text-gold hover:text-gold-dark hover:bg-gold/10 transition-colors duration-200 mr-2 disabled:opacity-60"
                       >
-                        <MoreHorizontal size={16} />
+                        {syncingId === contact.id ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openEdit(contact); }}
+                        title="Edit"
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-md text-slate-400 dark:text-white/60 hover:text-gold hover:bg-gold/10 transition-colors duration-200"
+                      >
+                        <Pencil size={16} />
                       </button>
                     </td>
                   </tr>
