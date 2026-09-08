@@ -6,7 +6,7 @@ import createApiClient from './httpClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL 
   ? `${import.meta.env.VITE_API_URL}/auth` 
-  : 'http://localhost:8000/api/auth';
+  : 'http://187.77.148.38/api/auth';
 
 const api = createApiClient(API_BASE_URL);
 
@@ -18,7 +18,7 @@ const api = createApiClient(API_BASE_URL);
  */
 export const login = async (username, password) => {
   try {
-    const response = await api.post('/login/', {
+    const response = await api.post('/login', {
       username,
       password,
     });
