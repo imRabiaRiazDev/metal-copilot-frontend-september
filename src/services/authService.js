@@ -4,9 +4,7 @@
  */
 import createApiClient from './httpClient';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/auth` 
-  : '/api/auth';
+const API_BASE_URL = '/api/auth';
 
 const api = createApiClient(API_BASE_URL);
 
