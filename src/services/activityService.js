@@ -1,7 +1,7 @@
 import { getToken } from './authService';
 import createApiClient from './httpClient';
 
-const API_BASE = '/api/activity';
+const API_BASE = 'https://corimetal.scarerror.com/api/activity';
 
 const api = createApiClient();
 

@@ -1,7 +1,7 @@
 import { getToken } from './authService';
 import createApiClient from './httpClient';
 
-const API_BASE_URL = '/api/rfq';
+const API_BASE_URL = 'https://corimetal.scarerror.com/api/rfq';
 
 const api = createApiClient();
 

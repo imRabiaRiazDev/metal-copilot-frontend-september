@@ -1,11 +1,11 @@
 import { getToken } from './authService';
 import createApiClient from './httpClient';
 
-const API_BASE = '/api/rfq/deals';
-const API_THREADS = '/api/rfq/email-threads';
-const API_PULL = '/api/rfq/monitor/emails/pull/';
-const API_TASK = '/api/rfq/monitor/task';
-const API_ATTACHMENTS = '/api/rfq/deals';
+const API_BASE = 'https://corimetal.scarerror.com/api/rfq/deals';
+const API_THREADS = 'https://corimetal.scarerror.com/api/rfq/email-threads';
+const API_PULL = 'https://corimetal.scarerror.com/api/rfq/monitor/emails/pull/';
+const API_TASK = 'https://corimetal.scarerror.com/api/rfq/monitor/task';
+const API_ATTACHMENTS = 'https://corimetal.scarerror.com/api/rfq/deals';
 
 const api = createApiClient();
 
