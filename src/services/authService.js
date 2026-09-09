@@ -4,7 +4,7 @@
  */
 import createApiClient from './httpClient';
 
-const API_BASE_URL = '/api/auth';
+const API_BASE_URL = 'https://corimetal.scarerror.com/api/auth';
 
 const api = createApiClient(API_BASE_URL);
 
